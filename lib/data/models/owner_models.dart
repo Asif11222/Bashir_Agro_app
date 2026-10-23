@@ -27,29 +27,17 @@ class FarmerItemModel {
   });
 
   factory FarmerItemModel.fromJson(Map<String, dynamic> json) {
-    // 1. Determine isAssigned from API boolean or integer, or fallback
-    bool assigned =
-        json['is_assigned'] == true ||
-        json['is_assigned'] == 1 ||
-        json['is_assigned'] == '1';
+    // The server is authoritative: only unfinished assignments mean engaged.
+    // Never infer assignment from a location or historical/completed task count.
+    final assignmentFlag = json['is_assigned'];
+    final bool assigned = assignmentFlag == true ||
+        assignmentFlag == 1 ||
+        assignmentFlag == '1' ||
+        assignmentFlag == 'true' ||
+        (assignmentFlag == null &&
+            (int.tryParse(json['active_tasks']?.toString() ?? '0') ?? 0) > 0);
 
     final locations = json['locations'] as List<dynamic>?;
-    if (!assigned && json['is_assigned'] == null) {
-      if (locations != null && locations.isNotEmpty) {
-        assigned = true;
-      }
-      final totalTasks =
-          int.tryParse(json['total_tasks']?.toString() ?? '0') ?? 0;
-      if (totalTasks > 0) {
-        assigned = true;
-      }
-      final activeTasks =
-          int.tryParse(json['active_tasks']?.toString() ?? '0') ?? 0;
-      if (activeTasks > 0) {
-        assigned = true;
-      }
-    }
-
     String region = json['region']?.toString() ?? '';
     if (region.isEmpty && locations != null && locations.isNotEmpty) {
       final firstLoc = locations.first;

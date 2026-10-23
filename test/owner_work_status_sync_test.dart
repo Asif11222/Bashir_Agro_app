@@ -2,6 +2,48 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:bashir_agro_app_2/data/models/owner_models.dart';
 
 void main() {
+  test('Farmer engagement follows unfinished work, not history or location', () {
+    const base = {
+      'id': 12,
+      'name': 'Kamál',
+      'locations': [
+        {'name': 'South plot', 'area': 3.0}
+      ],
+      'total_tasks': 2,
+      'completed_tasks': 2,
+      'progress_percent': 100,
+    };
+
+    final finished = FarmerItemModel.fromJson({
+      ...base,
+      'is_assigned': false,
+      'active_tasks': 0,
+    });
+    expect(finished.isAssigned, false);
+    expect(finished.progressPercent, 100);
+
+    final unfinished = FarmerItemModel.fromJson({
+      ...base,
+      'is_assigned': true,
+      'active_tasks': 1,
+    });
+    expect(unfinished.isAssigned, true);
+
+    // Server flag is authoritative even if a count is inconsistent or stale.
+    expect(FarmerItemModel.fromJson({
+      ...base,
+      'is_assigned': false,
+      'active_tasks': 1,
+    }).isAssigned, false);
+
+    // Old payloads never treat farms or historical tasks as assignments.
+    expect(FarmerItemModel.fromJson(base).isAssigned, false);
+    expect(FarmerItemModel.fromJson({
+      ...base,
+      'active_tasks': 1,
+    }).isAssigned, true);
+  });
+
   test('Owner cards use server assignment status without interpreting submission as status', () {
     const base = {
       'id': 18,

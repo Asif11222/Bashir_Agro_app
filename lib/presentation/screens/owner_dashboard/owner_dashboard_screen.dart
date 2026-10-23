@@ -77,14 +77,17 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen>
   void _pickLocation(List<OwnerLocationItem> locations, OwnerLocationItem? currentLocation) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.75,
+      ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
-        final maxListHeight = MediaQuery.sizeOf(ctx).height * 0.56;
-        final listHeight = ((locations.length + 1) * 56.0)
-            .clamp(56.0, maxListHeight).toDouble();
         return SafeArea(
+          top: false,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             child: Column(
@@ -96,9 +99,11 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen>
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
-                SizedBox(
-                  height: listHeight,
+                Flexible(
+                  fit: FlexFit.loose,
                   child: ListView.builder(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
                     itemCount: locations.length + 1,
                     itemBuilder: (context, index) {
                       if (index == 0) {

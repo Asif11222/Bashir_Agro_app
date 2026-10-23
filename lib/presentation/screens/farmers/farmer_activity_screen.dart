@@ -54,6 +54,8 @@ class FarmerActivityScreen extends ConsumerWidget {
             child: RefreshIndicator(
               color: AppColors.primaryGreen,
               onRefresh: () async {
+                // Refresh the identity badge together with the activity timeline.
+                await ref.read(ownerFarmersListProvider.notifier).loadFarmers();
                 ref.invalidate(farmerActivitiesProvider(farmer.id));
                 try {
                   await ref.read(farmerActivitiesProvider(farmer.id).future);
