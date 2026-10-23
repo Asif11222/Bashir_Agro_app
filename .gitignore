@@ -49,3 +49,6 @@ app.*.map.json
 
 # Documentation and PDF files
 *.pdf
+
+# Flutter CLI screenshots
+flutter_*.png

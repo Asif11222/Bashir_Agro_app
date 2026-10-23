@@ -27,18 +27,62 @@ class FarmerItemModel {
   });
 
   factory FarmerItemModel.fromJson(Map<String, dynamic> json) {
+    // 1. Determine isAssigned from API boolean or integer, or fallback
+    bool assigned = json['is_assigned'] == true || json['is_assigned'] == 1 || json['is_assigned'] == '1';
+
+    final locations = json['locations'] as List<dynamic>?;
+    if (!assigned && json['is_assigned'] == null) {
+      if (locations != null && locations.isNotEmpty) {
+        assigned = true;
+      }
+      final totalTasks = int.tryParse(json['total_tasks']?.toString() ?? '0') ?? 0;
+      if (totalTasks > 0) {
+        assigned = true;
+      }
+      final activeTasks = int.tryParse(json['active_tasks']?.toString() ?? '0') ?? 0;
+      if (activeTasks > 0) {
+        assigned = true;
+      }
+    }
+
+    String region = json['region']?.toString() ?? '';
+    if (region.isEmpty && locations != null && locations.isNotEmpty) {
+      final firstLoc = locations.first;
+      if (firstLoc is Map<String, dynamic>) {
+        region = firstLoc['name']?.toString() ?? '';
+      }
+    }
+    if (region.isEmpty) {
+      region = json['address']?.toString() ?? 'বাংলাদেশ';
+    }
+
+    double landArea = (json['land_area'] is num) ? (json['land_area'] as num).toDouble() : 0.0;
+    if (landArea <= 0.0 && locations != null && locations.isNotEmpty) {
+      for (final loc in locations) {
+        if (loc is Map<String, dynamic>) {
+          final area = loc['area'];
+          if (area is num) {
+            landArea += area.toDouble();
+          }
+        }
+      }
+    }
+    if (landArea <= 0.0) {
+      landArea = 4.0;
+    }
+
     return FarmerItemModel(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? json['full_name']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
-      region: json['region']?.toString() ?? 'বাংলাদেশ',
+      region: region,
       farmType: json['farm_type']?.toString() ?? json['primary_activity']?.toString() ?? 'কৃষি চাষ',
       progressPercent: json['progress_percent'] is int
           ? json['progress_percent']
           : int.tryParse(json['progress_percent']?.toString() ?? '0') ?? 0,
-      isAssigned: json['is_assigned'] == true,
+      isAssigned: assigned,
       avatarPath: json['profile_photo_url']?.toString() ?? '',
-      landArea: (json['land_area'] is num) ? (json['land_area'] as num).toDouble() : 4.0,
+      landArea: landArea,
       farmingCategories: json['farming_categories'] is List
           ? (json['farming_categories'] as List).map((e) => e.toString()).toList()
           : const ['সবজি'],
@@ -54,6 +98,9 @@ class FarmerActivityItemModel {
   final String location;
   final String photoAsset;
   final bool isCompleted;
+  final String status;
+  final String statusText;
+  final String? scheduledDate;
 
   const FarmerActivityItemModel({
     required this.id,
@@ -63,17 +110,49 @@ class FarmerActivityItemModel {
     required this.location,
     required this.photoAsset,
     this.isCompleted = true,
+    this.status = 'completed',
+    this.statusText = '✓ সম্পন্ন',
+    this.scheduledDate,
   });
 
   factory FarmerActivityItemModel.fromJson(Map<String, dynamic> json) {
     final task = json['task'] as Map<String, dynamic>?;
     final location = json['location'] as Map<String, dynamic>?;
-    final status = json['status']?.toString() ?? '';
-    final isCompleted = status == 'completed';
+    final rawStatus = (json['status']?.toString() ?? 'assigned').toLowerCase().trim();
+    final isCompleted = rawStatus == 'completed';
 
     final startTime = json['start_time']?.toString() ?? '';
     final date = json['scheduled_date']?.toString() ?? '';
     final timeStr = startTime.isNotEmpty ? '$date ($startTime)' : date;
+
+    String statusText;
+    switch (rawStatus) {
+      case 'completed':
+        statusText = '✓ সম্পন্ন';
+        break;
+      case 'in_progress':
+        statusText = 'চলমান';
+        break;
+      case 'submitted':
+        statusText = 'রিভিউ অপেক্ষায়';
+        break;
+      case 'late':
+        statusText = 'দেরি হয়েছে';
+        break;
+      case 'assigned':
+      case 'pending':
+      default:
+        final now = DateTime.now();
+        final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+        if (date.isNotEmpty && date.compareTo(todayStr) < 0) {
+          statusText = 'বাকি আছে';
+        } else if (date.isNotEmpty && date.compareTo(todayStr) > 0) {
+          statusText = 'আসন্ন';
+        } else {
+          statusText = 'বাকি আছে';
+        }
+        break;
+    }
 
     return FarmerActivityItemModel(
       id: json['id']?.toString() ?? '',
@@ -83,6 +162,9 @@ class FarmerActivityItemModel {
       location: location?['name']?.toString() ?? 'মাঠ',
       photoAsset: 'assets/images/vegetable_field.jpg',
       isCompleted: isCompleted,
+      status: rawStatus,
+      statusText: statusText,
+      scheduledDate: date.isNotEmpty ? date : null,
     );
   }
 }

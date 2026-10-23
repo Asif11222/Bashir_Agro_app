@@ -57,7 +57,8 @@ class FarmerActivityScreen extends ConsumerWidget {
                   // Connected Vertical Timeline with Real API Data
                   activitiesAsync.when(
                     data: (activities) {
-                      if (activities.isEmpty) {
+                      final filteredActivities = _filterActivities(activities, selectedFilter);
+                      if (filteredActivities.isEmpty) {
                         return Container(
                           padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
                           decoration: BoxDecoration(
@@ -65,10 +66,10 @@ class FarmerActivityScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: const Color(0xFFE8ECE8)),
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Text(
-                              'এই কৃষকের জন্য এখনও কোনো কার্যক্রম পাওয়া যায়নি।',
-                              style: TextStyle(
+                              '$selectedFilter কোনো কার্যক্রম পাওয়া যায়নি।',
+                              style: const TextStyle(
                                 fontSize: 14,
                                 color: Color(0xFF64748B),
                                 fontWeight: FontWeight.w500,
@@ -77,7 +78,7 @@ class FarmerActivityScreen extends ConsumerWidget {
                           ),
                         );
                       }
-                      return _buildTimelineList(context, activities);
+                      return _buildTimelineList(context, filteredActivities);
                     },
                     loading: () => const Padding(
                       padding: EdgeInsets.symmetric(vertical: 40),
@@ -365,14 +366,12 @@ class FarmerActivityScreen extends ConsumerWidget {
                       width: 24,
                       height: 24,
                       decoration: BoxDecoration(
-                        color: activity.isCompleted
-                            ? const Color(0xFF006837)
-                            : const Color(0xFFFFA000),
+                        color: _getTimelineDotColor(activity),
                         shape: BoxShape.circle,
                       ),
                       child: Center(
                         child: Icon(
-                          activity.isCompleted ? Icons.check_rounded : Icons.access_time_rounded,
+                          _getTimelineDotIcon(activity),
                           color: Colors.white,
                           size: 15,
                         ),
@@ -460,19 +459,15 @@ class FarmerActivityScreen extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
-                        color: activity.isCompleted
-                            ? const Color(0xFFE6F7ED)
-                            : const Color(0xFFFFF8E1),
+                        color: _getBadgeBgColor(activity),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        activity.isCompleted ? '✓ সম্পন্ন' : 'চলমান',
+                        activity.statusText,
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: activity.isCompleted
-                              ? AppColors.primaryGreen
-                              : const Color(0xFFF57C00),
+                          color: _getBadgeTextColor(activity),
                         ),
                       ),
                     ),
@@ -516,5 +511,102 @@ class FarmerActivityScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  List<FarmerActivityItemModel> _filterActivities(
+    List<FarmerActivityItemModel> activities,
+    String filter,
+  ) {
+    final now = DateTime.now();
+    final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+    if (filter == 'আজকের') {
+      return activities.where((act) {
+        if (act.scheduledDate != null && act.scheduledDate == todayStr) {
+          return true;
+        }
+        // Also show uncompleted / pending tasks that need action today
+        if (!act.isCompleted && (act.status == 'in_progress' || act.status == 'pending' || act.status == 'assigned' || act.status == 'late')) {
+          return true;
+        }
+        return false;
+      }).toList();
+    } else if (filter == '৭ দিন') {
+      final sevenDaysAgo = now.subtract(const Duration(days: 7));
+      return activities.where((act) {
+        if (act.scheduledDate == null || act.scheduledDate!.isEmpty) return true;
+        try {
+          final d = DateTime.parse(act.scheduledDate!);
+          return d.isAfter(sevenDaysAgo) || d.isAtSameMomentAs(sevenDaysAgo);
+        } catch (_) {
+          return true;
+        }
+      }).toList();
+    } else if (filter == '৩০ দিন') {
+      final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+      return activities.where((act) {
+        if (act.scheduledDate == null || act.scheduledDate!.isEmpty) return true;
+        try {
+          final d = DateTime.parse(act.scheduledDate!);
+          return d.isAfter(thirtyDaysAgo) || d.isAtSameMomentAs(thirtyDaysAgo);
+        } catch (_) {
+          return true;
+        }
+      }).toList();
+    }
+
+    return activities;
+  }
+
+  Color _getTimelineDotColor(FarmerActivityItemModel activity) {
+    if (activity.isCompleted || activity.status == 'completed') {
+      return const Color(0xFF006837); // Green
+    }
+    if (activity.status == 'in_progress') {
+      return const Color(0xFFFFA000); // Amber/Orange
+    }
+    if (activity.status == 'submitted') {
+      return const Color(0xFF0284C7); // Sky blue
+    }
+    return const Color(0xFF94A3B8); // Slate grey
+  }
+
+  IconData _getTimelineDotIcon(FarmerActivityItemModel activity) {
+    if (activity.isCompleted || activity.status == 'completed') {
+      return Icons.check_rounded;
+    }
+    if (activity.status == 'in_progress') {
+      return Icons.access_time_rounded;
+    }
+    if (activity.status == 'submitted') {
+      return Icons.hourglass_top_rounded;
+    }
+    return Icons.schedule_rounded;
+  }
+
+  Color _getBadgeBgColor(FarmerActivityItemModel activity) {
+    if (activity.isCompleted || activity.status == 'completed') {
+      return const Color(0xFFE6F7ED); // Light green
+    }
+    if (activity.status == 'in_progress') {
+      return const Color(0xFFFFF8E1); // Light amber
+    }
+    if (activity.status == 'submitted') {
+      return const Color(0xFFE0F2FE); // Light sky blue
+    }
+    return const Color(0xFFF1F5F9); // Light grey
+  }
+
+  Color _getBadgeTextColor(FarmerActivityItemModel activity) {
+    if (activity.isCompleted || activity.status == 'completed') {
+      return AppColors.primaryGreen; // #006837
+    }
+    if (activity.status == 'in_progress') {
+      return const Color(0xFFF57C00); // Amber text
+    }
+    if (activity.status == 'submitted') {
+      return const Color(0xFF0284C7); // Sky blue text
+    }
+    return const Color(0xFF64748B); // Slate grey text
   }
 }
