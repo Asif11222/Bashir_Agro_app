@@ -79,19 +79,18 @@ void main() {
     expect(find.byType(FarmerActivityScreen), findsOneWidget);
   });
 
-  testWidgets('Owner Photo Details renders verification and coordinates', (tester) async {
+  testWidgets('Owner Photo Details does not fabricate verification and coordinates', (tester) async {
     await tester.pumpWidget(
       const ProviderScope(
         child: MaterialApp(
-          home: OwnerPhotoDetailsScreen(),
+          home: OwnerPhotoDetailsScreen(assignmentId: 0),
         ),
       ),
     );
 
-    expect(find.text('ছবির বিস্তারিত'), findsOneWidget);
-    expect(find.text('সঠিক অবস্থান'), findsOneWidget);
-    expect(find.text('23.8103° N, 90.4125° E'), findsOneWidget);
-    expect(find.text('নির্ধারিত খামার এলাকা'), findsOneWidget);
+    expect(find.text('কাজের বিস্তারিত'), findsOneWidget);
+    expect(find.text('কাজের সঠিক পরিচিতি পাওয়া যায়নি।'), findsOneWidget);
+    expect(find.text('সঠিক অবস্থান'), findsNothing);
   });
 
   testWidgets('Owner Locations List renders header, search and summary', (tester) async {

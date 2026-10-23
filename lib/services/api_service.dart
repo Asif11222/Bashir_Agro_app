@@ -62,17 +62,20 @@ class ApiService {
     if (date != null && date.isNotEmpty) queryParams['date'] = date;
     if (perPage != null) queryParams['per_page'] = perPage;
 
-    final response = await _client.get(
-      ApiConstants.assignments,
-      queryParams: queryParams,
-    );
-
-    final data = response['data'] as List<dynamic>?;
-    if (data == null) return [];
-
-    return data
-        .map((item) => TaskAssignmentModel.fromJson(item as Map<String, dynamic>))
-        .toList();
+    queryParams['per_page'] = perPage ?? 100;
+    final tasks = <TaskAssignmentModel>[];
+    var page = 1;
+    while (true) {
+      queryParams['page'] = page;
+      final response = await _client.get(ApiConstants.assignments, queryParams: queryParams);
+      final data = response['data'] as List<dynamic>? ?? [];
+      tasks.addAll(data.map((item) => TaskAssignmentModel.fromJson(item as Map<String, dynamic>)));
+      final meta = response['meta'] as Map<String, dynamic>?;
+      final lastPage = int.tryParse(meta?['last_page']?.toString() ?? '1') ?? 1;
+      if (page >= lastPage || data.isEmpty) break;
+      page++;
+    }
+    return tasks;
   }
 
   /// Get Assignment Details
@@ -207,10 +210,11 @@ class ApiService {
   }
 
   /// Get list of farmers from backend
-  Future<List<Map<String, dynamic>>> getFarmersList({String? search, String? status}) async {
+  Future<List<Map<String, dynamic>>> getFarmersList({String? search, String? status, String? date}) async {
     final queryParams = <String, dynamic>{};
     if (search != null && search.isNotEmpty) queryParams['search'] = search;
     if (status != null && status.isNotEmpty) queryParams['status'] = status;
+    if (date != null && date.isNotEmpty) queryParams['date'] = date;
 
     final response = await _client.get(
       ApiConstants.farmers,
@@ -239,15 +243,20 @@ class ApiService {
     if (locationId != null && locationId > 0) queryParams['location_id'] = locationId;
     if (farmerId != null && farmerId > 0) queryParams['farmer_id'] = farmerId;
     if (status != null && status.isNotEmpty) queryParams['status'] = status;
-    queryParams['per_page'] = 50;
-
-    final response = await _client.get(
-      ApiConstants.assignments,
-      queryParams: queryParams,
-    );
-    final data = response['data'] as List<dynamic>?;
-    if (data == null) return [];
-    return data.map((e) => e as Map<String, dynamic>).toList();
+    queryParams['per_page'] = 100;
+    var page = 1;
+    final all = <Map<String, dynamic>>[];
+    while (true) {
+      queryParams['page'] = page;
+      final response = await _client.get(ApiConstants.assignments, queryParams: queryParams);
+      final items = response['data'] as List<dynamic>? ?? [];
+      all.addAll(items.map((e) => e as Map<String, dynamic>));
+      final meta = response['meta'] as Map<String, dynamic>?;
+      final lastPage = int.tryParse(meta?['last_page']?.toString() ?? '1') ?? 1;
+      if (page >= lastPage || items.isEmpty) break;
+      page++;
+    }
+    return all;
   }
 
   /// Get notifications for authenticated user

@@ -17,6 +17,7 @@ class CompletedTaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = task.completedSubmissionType;
+    final hasVerification = task.geofencePassed != null;
 
     // 1. Theme configuration according to the 4 states
     final (
@@ -74,11 +75,11 @@ class CompletedTaskCard extends StatelessWidget {
     // Formatted submission time
     final submittedTime = task.submittedAt != null && task.submittedAt!.isNotEmpty
         ? task.submittedAt!
-        : 'সকাল ৯:১৫';
+        : 'জমা দেওয়ার সময় নেই';
 
     // Photos list
     final photos = task.evidencePhotoUrls;
-    final int photoCount = photos.isNotEmpty ? photos.length : (type == CompletedSubmissionType.bothIssues ? 5 : (type == CompletedSubmissionType.lateOnly ? 1 : 3));
+    final int photoCount = photos.length;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -120,15 +121,16 @@ class CompletedTaskCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(headerIcon, size: 13, color: headerTextColor),
+                            Icon(hasVerification ? headerIcon : Icons.info_outline_rounded,
+                                size: 13, color: hasVerification ? headerTextColor : const Color(0xFF64748B)),
                             const SizedBox(width: 4),
                             Flexible(
                               child: Text(
-                                headerLabel,
+                                hasVerification ? headerLabel : 'যাচাইয়ের তথ্য নেই',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
-                                  color: headerTextColor,
+                                  color: hasVerification ? headerTextColor : const Color(0xFF64748B),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -283,7 +285,7 @@ class CompletedTaskCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           // 1. Geofence Status Pill
-                          _buildVerificationPill(
+                          if (hasVerification) _buildVerificationPill(
                             isPositive: geoPassed,
                             positiveLabel: 'সঠিক লোকেশনে',
                             negativeLabel: 'লোকেশনের বাইরে',
@@ -291,7 +293,7 @@ class CompletedTaskCard extends StatelessWidget {
                           const SizedBox(height: 5),
 
                           // 2. Time Status Pill
-                          _buildVerificationPill(
+                          if (hasVerification) _buildVerificationPill(
                             isPositive: !isLate,
                             positiveLabel: 'সময়ের মধ্যে',
                             negativeLabel: 'সময় পেরিয়েছে',
@@ -306,7 +308,7 @@ class CompletedTaskCard extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 // Photo previews
-                                _buildPhotoPreviews(photos, task.thumbnailType, photoCount),
+                                if (photoCount > 0) _buildPhotoPreviews(photos, task.thumbnailType, photoCount),
                                 const SizedBox(width: 4),
 
                                 // Count Badge (e.g. ৩টি ছবি)

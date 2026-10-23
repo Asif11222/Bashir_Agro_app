@@ -12,7 +12,8 @@ class ApiConstants {
       return envUrl;
     }
 
-    return 'https://129-212-239-216.sslip.io/api/v1';
+    // return 'https://129-212-239-216.sslip.io/api/v1';
+    return 'http://127.0.0.1:8000/api/v1';
   }
 
   static set baseUrl(String url) {

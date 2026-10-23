@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/owner_models.dart';
+import '../models/task_assignment_model.dart';
 import 'farmer_app_state.dart';
 
 // Dashboard State Model
@@ -45,6 +46,7 @@ class OwnerDashboardState {
 }
 
 class OwnerDashboardNotifier extends Notifier<OwnerDashboardState> {
+  int _loadVersion = 0;
   @override
   OwnerDashboardState build() {
     final now = DateTime.now();
@@ -53,6 +55,7 @@ class OwnerDashboardNotifier extends Notifier<OwnerDashboardState> {
   }
 
   Future<void> loadDashboard({DateTime? date, OwnerLocationItem? location, bool clearLocation = false}) async {
+    final version = ++_loadVersion;
     final targetDate = date ?? state.selectedDate;
     final targetLoc = clearLocation ? null : (location ?? state.selectedLocation);
 
@@ -80,6 +83,7 @@ class OwnerDashboardNotifier extends Notifier<OwnerDashboardState> {
           .map((e) => OwnerLocationItem.fromJson(e as Map<String, dynamic>))
           .toList();
 
+      if (version != _loadVersion) return;
       state = state.copyWith(
         isLoading: false,
         kpis: OwnerDashboardKpis.fromJson(kpisJson),
@@ -87,6 +91,7 @@ class OwnerDashboardNotifier extends Notifier<OwnerDashboardState> {
         locations: locationsList,
       );
     } catch (e) {
+      if (version != _loadVersion) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: e.toString(),
@@ -148,20 +153,40 @@ final farmerSortOrderProvider =
     NotifierProvider<FarmerSortOrderNotifier, FarmerSortOrder>(
         FarmerSortOrderNotifier.new);
 
+class OwnerFarmersSyncErrorNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+  void setError(bool error) => state = error;
+}
+
+final ownerFarmersSyncErrorProvider =
+    NotifierProvider<OwnerFarmersSyncErrorNotifier, bool>(OwnerFarmersSyncErrorNotifier.new);
+
 // Real Farmers List Notifier from API
 class OwnerFarmersListNotifier extends Notifier<List<FarmerItemModel>> {
+  int _loadVersion = 0;
+
   @override
   List<FarmerItemModel> build() {
+    // Recalculate when the dashboard's selected date changes.
+    ref.watch(ownerDashboardProvider.select((dashboard) => dashboard.selectedDate));
     Future.microtask(() => loadFarmers());
     return [];
   }
 
   Future<void> loadFarmers({String? search, String? status}) async {
+    final version = ++_loadVersion;
     try {
       final apiService = ref.read(apiServiceProvider);
-      final list = await apiService.getFarmersList(search: search, status: status);
+      final selectedDate = ref.read(ownerDashboardProvider).selectedDate;
+      final dateStr = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+      final list = await apiService.getFarmersList(search: search, status: status, date: dateStr);
+      if (version != _loadVersion) return;
       state = list.map((e) => FarmerItemModel.fromJson(e)).toList();
+      ref.read(ownerFarmersSyncErrorProvider.notifier).setError(false);
     } catch (_) {
+      if (version != _loadVersion) return;
+      ref.read(ownerFarmersSyncErrorProvider.notifier).setError(true);
       final dashFarmers = ref.read(ownerDashboardProvider).farmers;
       if (dashFarmers.isNotEmpty) {
         state = dashFarmers;
@@ -220,13 +245,12 @@ final currentSelectedFarmerProvider = Provider<FarmerItemModel?>((ref) {
   final fallbackFarmers = ref.watch(ownerDashboardProvider).farmers;
   final pool = allFarmers.isNotEmpty ? allFarmers : fallbackFarmers;
 
-  if (pool.isEmpty) return null;
-  if (id.isEmpty) return pool.first;
+  if (pool.isEmpty || id.isEmpty) return null;
 
   try {
     return pool.firstWhere((f) => f.id == id);
   } catch (_) {
-    return pool.first;
+    return null;
   }
 });
 
@@ -271,17 +295,34 @@ final ownerTaskTimeFilterProvider =
         OwnerTaskTimeFilterNotifier.new);
 
 // Planned tasks provider (Real assignments from API)
-class OwnerPlannedTasksNotifier extends Notifier<List<OwnerTaskPlanModel>> {
+class OwnerTaskLoadInfo {
+  final bool loading;
+  final String? error;
+  const OwnerTaskLoadInfo({this.loading = false, this.error});
+}
+
+class OwnerTaskLoadInfoNotifier extends Notifier<OwnerTaskLoadInfo> {
   @override
-  List<OwnerTaskPlanModel> build() {
-    Future.microtask(() => loadTasks());
-    return [];
-  }
+  OwnerTaskLoadInfo build() => const OwnerTaskLoadInfo();
+  void update({bool loading = false, String? error}) =>
+      state = OwnerTaskLoadInfo(loading: loading, error: error);
+}
+
+final ownerTaskLoadInfoProvider =
+    NotifierProvider<OwnerTaskLoadInfoNotifier, OwnerTaskLoadInfo>(OwnerTaskLoadInfoNotifier.new);
+
+class OwnerPlannedTasksNotifier extends Notifier<List<OwnerTaskPlanModel>> {
+  int _loadVersion = 0;
+  @override
+  List<OwnerTaskPlanModel> build() => [];
 
   Future<void> loadTasks({
     DateTime? date,
     OwnerTaskTimeFilter? filter,
   }) async {
+    final version = ++_loadVersion;
+    ref.read(ownerTaskLoadInfoProvider.notifier).update(loading: true);
+    state = [];
     try {
       final OwnerTaskTimeFilter activeFilter =
           filter ?? ref.read(ownerTaskTimeFilterProvider);
@@ -315,9 +356,15 @@ class OwnerPlannedTasksNotifier extends Notifier<List<OwnerTaskPlanModel>> {
         startDate: startDate,
         endDate: endDate,
       );
+      if (version != _loadVersion) return;
       state = raw.map((e) => OwnerTaskPlanModel.fromJson(e)).toList();
+      ref.read(ownerTaskLoadInfoProvider.notifier).update();
     } catch (_) {
+      if (version != _loadVersion) return;
       state = [];
+      ref.read(ownerTaskLoadInfoProvider.notifier).update(
+        error: 'সার্ভারের সর্বশেষ কাজের অবস্থা পাওয়া যায়নি। আবার চেষ্টা করুন।',
+      );
     }
   }
 
@@ -330,18 +377,16 @@ final ownerPlannedTasksProvider =
     NotifierProvider<OwnerPlannedTasksNotifier, List<OwnerTaskPlanModel>>(
         OwnerPlannedTasksNotifier.new);
 
+final ownerAssignmentDetailsProvider = FutureProvider.autoDispose.family<TaskAssignmentModel, int>((ref, assignmentId) async {
+  return ref.read(apiServiceProvider).getAssignmentDetails(assignmentId);
+});
+
 // Real Farmer activities provider from API assignments
-final farmerActivitiesProvider = FutureProvider.family<List<FarmerActivityItemModel>, String>((ref, farmerId) async {
-  final apiService = ref.read(apiServiceProvider);
+final farmerActivitiesProvider = FutureProvider.autoDispose.family<List<FarmerActivityItemModel>, String>((ref, farmerId) async {
   final id = int.tryParse(farmerId);
   if (id == null || id <= 0) return [];
-
-  try {
-    final raw = await apiService.getRawAssignments(farmerId: id);
-    return raw.map((e) => FarmerActivityItemModel.fromJson(e)).toList();
-  } catch (_) {
-    return [];
-  }
+  final raw = await ref.read(apiServiceProvider).getRawAssignments(farmerId: id);
+  return raw.map((e) => FarmerActivityItemModel.fromJson(e)).toList();
 });
 
 // Owner Bottom Navigation Index (0: ড্যাশবোর্ড, 1: কাজসমূহ, 2: কৃষকরা, 3: লোকেশন, 4: সেটিংস)

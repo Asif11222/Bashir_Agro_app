@@ -26,6 +26,13 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    Future.microtask(() {
+      if (!mounted) return;
+      final current = ref.read(ownerDashboardProvider);
+      if (!current.isLoading) {
+        ref.read(ownerDashboardProvider.notifier).loadDashboard(date: _selectedDate);
+      }
+    });
   }
 
   @override
@@ -138,6 +145,12 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen>
                   children: [
                     // 1. Lush Green Header with Dynamic User Name
                     _buildHeader(context),
+                    if (dashState.errorMessage != null)
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+                        child: Text('সার্ভার থেকে সর্বশেষ ড্যাশবোর্ডের তথ্য পাওয়া যায়নি। রিফ্রেশ করুন।',
+                          style: TextStyle(color: AppColors.errorRed, fontSize: 12)),
+                      ),
 
                     // 2. Date and Location Filter Pills
                     Padding(
@@ -362,7 +375,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen>
         : (currentUser?.name.isNotEmpty == true ? currentUser!.name : 'আব্দুল রহমান');
 
     return OwnerFarmHeaderBackground(
-      height: 210,
+      height: OwnerFarmHeaderBackground.standardHeight,
       child: SafeArea(
         bottom: false,
         child: Padding(

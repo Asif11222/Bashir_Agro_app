@@ -46,7 +46,16 @@ class FarmerActivityScreen extends ConsumerWidget {
 
           // 2. Timeline and Content
           Expanded(
-            child: SingleChildScrollView(
+            child: RefreshIndicator(
+              color: AppColors.primaryGreen,
+              onRefresh: () async {
+                ref.invalidate(farmerActivitiesProvider(farmer.id));
+                try {
+                  await ref.read(farmerActivitiesProvider(farmer.id).future);
+                } catch (_) {}
+              },
+              child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               child: Column(
                 children: [
@@ -57,7 +66,16 @@ class FarmerActivityScreen extends ConsumerWidget {
                   // Connected Vertical Timeline with Real API Data
                   activitiesAsync.when(
                     data: (activities) {
-                      if (activities.isEmpty) {
+                      final now = DateTime.now();
+                      final begin = DateTime(now.year, now.month, now.day).subtract(
+                        Duration(days: selectedFilter == '৩০ দিন' ? 29 : selectedFilter == '৭ দিন' ? 6 : 0),
+                      );
+                      final end = DateTime(now.year, now.month, now.day + 1);
+                      final shown = activities.where((activity) {
+                        final date = DateTime.tryParse(activity.scheduledDate);
+                        return date != null && !date.isBefore(begin) && date.isBefore(end);
+                      }).toList();
+                      if (shown.isEmpty) {
                         return Container(
                           padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
                           decoration: BoxDecoration(
@@ -77,7 +95,7 @@ class FarmerActivityScreen extends ConsumerWidget {
                           ),
                         );
                       }
-                      return _buildTimelineList(context, activities);
+                      return _buildTimelineList(context, shown);
                     },
                     loading: () => const Padding(
                       padding: EdgeInsets.symmetric(vertical: 40),
@@ -99,6 +117,7 @@ class FarmerActivityScreen extends ConsumerWidget {
                   ),
                 ],
               ),
+              ),
             ),
           ),
 
@@ -114,7 +133,7 @@ class FarmerActivityScreen extends ConsumerWidget {
       children: [
         // Green Curved Header Top Banner with Scenery
         OwnerFarmHeaderBackground(
-          height: 160,
+          height: OwnerFarmHeaderBackground.standardHeight,
           child: SafeArea(
             bottom: false,
             child: Padding(
@@ -133,10 +152,12 @@ class FarmerActivityScreen extends ConsumerWidget {
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.only(top: 2),
+                  const Expanded(
                     child: Text(
                       'কৃষকের কার্যক্রম',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -165,7 +186,7 @@ class FarmerActivityScreen extends ConsumerWidget {
 
         // Floating Profile Card with proper bottom clearance
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 68, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 144, 16, 12),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -263,7 +284,7 @@ class FarmerActivityScreen extends ConsumerWidget {
 
               Row(
                 children: [
-                  _buildStatItem('জমি এলাকা', '${farmer.landArea} একর'),
+                  _buildStatItem('জমি এলাকা', farmer.landArea > 0 ? '${farmer.landArea} একর' : 'তথ্য নেই'),
                   _buildStatItem('মূল কার্যক্রম', farmer.farmType),
                   _buildStatItem('অগ্রগতি', '${farmer.progressPercent}%'),
                 ],
@@ -406,7 +427,10 @@ class FarmerActivityScreen extends ConsumerWidget {
     BuildContext context,
     FarmerActivityItemModel activity,
   ) {
-    return Container(
+    return InkWell(
+      onTap: () => context.push('/owner-photo-details/${activity.id}'),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -428,14 +452,16 @@ class FarmerActivityScreen extends ConsumerWidget {
             child: SizedBox(
               width: 72,
               height: 72,
-              child: Image.asset(
-                activity.photoAsset,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: const Color(0xFFE2E8F0),
-                  child: const Icon(Icons.image_outlined, color: Colors.grey),
-                ),
-              ),
+              child: activity.photoUrls.isNotEmpty
+                  ? Image.network(
+                      activity.photoUrls.first,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined),
+                    )
+                  : Container(
+                      color: const Color(0xFFE9F5ED),
+                      child: const Icon(Icons.grass_rounded, color: AppColors.primaryGreen),
+                    ),
             ),
           ),
           const SizedBox(width: 12),
@@ -466,7 +492,7 @@ class FarmerActivityScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        activity.isCompleted ? '✓ সম্পন্ন' : 'চলমান',
+                        activity.statusText,
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -494,9 +520,13 @@ class FarmerActivityScreen extends ConsumerWidget {
                   children: [
                     const Icon(Icons.access_time_rounded, size: 12, color: Color(0xFF94A3B8)),
                     const SizedBox(width: 3),
-                    Text(
-                      activity.time,
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                    Flexible(
+                      child: Text(
+                        activity.time,
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     const Icon(Icons.location_on_rounded, size: 12, color: Color(0xFF94A3B8)),
@@ -510,11 +540,34 @@ class FarmerActivityScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+                if (activity.isCompleted) ...[
+                  const SizedBox(height: 5),
+                  Wrap(spacing: 5, runSpacing: 4, children: [
+                    if (OwnerWorkStatus.verificationLabel(activity.geofencePassed, activity.isLate) != null)
+                      _activityBadge(OwnerWorkStatus.verificationLabel(activity.geofencePassed, activity.isLate)!),
+                    if (activity.geofencePassed != null)
+                      _activityBadge(activity.geofencePassed! ? 'সঠিক লোকেশনে' : 'লোকেশনের বাইরে'),
+                    if (activity.isLate != null)
+                      _activityBadge(activity.isLate! ? 'সময় পেরিয়েছে' : 'সময়ের মধ্যে'),
+                    _activityBadge('${activity.photoUrls.length}টি ছবি'),
+                  ]),
+                ],
               ],
             ),
           ),
         ],
       ),
+    ),
     );
   }
+
+  Widget _activityBadge(String text) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+    decoration: BoxDecoration(
+      color: text.contains('সমস্যা') || text.contains('বাইরে') || text.contains('পেরিয়েছে')
+          ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
+      borderRadius: BorderRadius.circular(9),
+    ),
+    child: Text(text, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+  );
 }

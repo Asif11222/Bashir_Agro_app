@@ -114,33 +114,6 @@ class TaskService {
       }
       return updated;
     } catch (_) {
-      // If offline, update locally
-      final cached = getCachedAssignments();
-      final index = cached.indexWhere((t) => t.id == assignmentId);
-      if (index != -1) {
-        final current = cached[index];
-        final updated = TaskAssignmentModel(
-          id: current.id,
-          scheduledDate: current.scheduledDate,
-          startTime: current.startTime,
-          endTime: current.endTime,
-          priority: current.priority,
-          status: 'in_progress',
-          notes: current.notes,
-          assignedAt: current.assignedAt,
-          startedAt: DateTime.now().toIso8601String(),
-          completedAt: current.completedAt,
-          task: current.task,
-          location: current.location,
-          farmer: current.farmer,
-        );
-        cached[index] = updated;
-        await _storage.setJson(
-          ApiConstants.cachedTasksKey,
-          cached.map((e) => e.toJson()).toList(),
-        );
-        return updated;
-      }
       rethrow;
     }
   }

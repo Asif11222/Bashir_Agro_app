@@ -22,8 +22,8 @@ class FarmerItemModel {
     required this.progressPercent,
     required this.isAssigned,
     this.avatarPath = '',
-    this.landArea = 5.0,
-    this.farmingCategories = const ['সবজি', 'ধান', 'মাছ', 'গরু'],
+    this.landArea = 0.0,
+    this.farmingCategories = const [],
   });
 
   factory FarmerItemModel.fromJson(Map<String, dynamic> json) {
@@ -38,11 +38,33 @@ class FarmerItemModel {
           : int.tryParse(json['progress_percent']?.toString() ?? '0') ?? 0,
       isAssigned: json['is_assigned'] == true,
       avatarPath: json['profile_photo_url']?.toString() ?? '',
-      landArea: (json['land_area'] is num) ? (json['land_area'] as num).toDouble() : 4.0,
+      landArea: (json['land_area'] is num) ? (json['land_area'] as num).toDouble() : 0.0,
       farmingCategories: json['farming_categories'] is List
           ? (json['farming_categories'] as List).map((e) => e.toString()).toList()
-          : const ['সবজি'],
+          : const [],
     );
+  }
+}
+
+class OwnerWorkStatus {
+  static String label(String status) {
+    switch (status) {
+      case 'completed': return 'সম্পন্ন';
+      case 'in_progress': return 'চলমান';
+      case 'cancelled': return 'বাতিল';
+      case 'late': return 'দেরি';
+      case 'assigned':
+      case 'pending': return 'নির্ধারিত';
+      default: return 'অজানা';
+    }
+  }
+
+  static String? verificationLabel(bool? geofencePassed, bool? isLate) {
+    if (geofencePassed == null || isLate == null) return null;
+    if (!geofencePassed && isLate) return 'সময় ও লোকেশনে সমস্যা';
+    if (!geofencePassed) return 'লোকেশনে সমস্যা';
+    if (isLate) return 'সময়ে সমস্যা';
+    return 'সব ঠিক';
   }
 }
 
@@ -52,8 +74,12 @@ class FarmerActivityItemModel {
   final String description;
   final String time;
   final String location;
-  final String photoAsset;
-  final bool isCompleted;
+  final String scheduledDate;
+  final String statusText;
+  final String? submittedAt;
+  final bool? geofencePassed;
+  final bool? isLate;
+  final List<String> photoUrls;
 
   const FarmerActivityItemModel({
     required this.id,
@@ -61,28 +87,38 @@ class FarmerActivityItemModel {
     required this.description,
     required this.time,
     required this.location,
-    required this.photoAsset,
-    this.isCompleted = true,
+    this.scheduledDate = '',
+    this.statusText = 'নির্ধারিত',
+    this.submittedAt,
+    this.geofencePassed,
+    this.isLate,
+    this.photoUrls = const [],
   });
+
+  bool get isCompleted => statusText == 'সম্পন্ন';
 
   factory FarmerActivityItemModel.fromJson(Map<String, dynamic> json) {
     final task = json['task'] as Map<String, dynamic>?;
     final location = json['location'] as Map<String, dynamic>?;
-    final status = json['status']?.toString() ?? '';
-    final isCompleted = status == 'completed';
-
+    final submission = json['submission'] as Map<String, dynamic>?;
+    final geofence = submission?['geofence'] as Map<String, dynamic>?;
+    final evidence = submission?['evidence_photos'] as List<dynamic>? ?? [];
     final startTime = json['start_time']?.toString() ?? '';
     final date = json['scheduled_date']?.toString() ?? '';
-    final timeStr = startTime.isNotEmpty ? '$date ($startTime)' : date;
-
     return FarmerActivityItemModel(
       id: json['id']?.toString() ?? '',
-      title: task?['name']?.toString() ?? 'মাঠ কাজ',
-      description: json['notes']?.toString() ?? task?['instructions']?.toString() ?? 'কাজের বিবরণ সম্পন্ন হয়েছে।',
-      time: timeStr,
-      location: location?['name']?.toString() ?? 'মাঠ',
-      photoAsset: 'assets/images/vegetable_field.jpg',
-      isCompleted: isCompleted,
+      title: task?['name']?.toString() ?? 'কৃষি কাজ',
+      description: json['notes']?.toString() ?? task?['instructions']?.toString() ?? '',
+      time: startTime.isEmpty ? date : '$date ($startTime)',
+      scheduledDate: date,
+      location: location?['name']?.toString() ?? 'লোকেশন নেই',
+      statusText: OwnerWorkStatus.label(json['status']?.toString() ?? ''),
+      submittedAt: submission?['submitted_at']?.toString(),
+      geofencePassed: geofence?['passed'] is bool ? geofence!['passed'] as bool : null,
+      isLate: submission?['is_late'] is bool ? submission!['is_late'] as bool : null,
+      photoUrls: evidence.whereType<Map<String, dynamic>>()
+          .map((photo) => photo['url']?.toString() ?? '')
+          .where((url) => url.isNotEmpty).toList(),
     );
   }
 }
@@ -93,10 +129,20 @@ class OwnerTaskPlanModel {
   final String timeRange;
   final String farmerName;
   final String location;
-  final String statusText; // নির্ধারিত, চলমান, বাকি
-  final String photoAsset;
-
+  final String statusText;
   final String? scheduledDate;
+  final String? submittedAt;
+  final bool isPastDeadline;
+  final bool hasSubmission;
+  final bool? geofencePassed;
+  final bool? isLate;
+  final List<String> photoUrls;
+
+  bool get isCompleted => statusText == 'সম্পন্ন';
+
+  String? get completionIssueLabel => isCompleted && hasSubmission
+      ? OwnerWorkStatus.verificationLabel(geofencePassed, isLate)
+      : null;
 
   const OwnerTaskPlanModel({
     required this.id,
@@ -105,46 +151,45 @@ class OwnerTaskPlanModel {
     required this.farmerName,
     required this.location,
     required this.statusText,
-    required this.photoAsset,
     this.scheduledDate,
+    this.submittedAt,
+    this.isPastDeadline = false,
+    this.hasSubmission = false,
+    this.geofencePassed,
+    this.isLate,
+    this.photoUrls = const [],
   });
 
   factory OwnerTaskPlanModel.fromJson(Map<String, dynamic> json) {
     final task = json['task'] as Map<String, dynamic>?;
     final farmer = json['farmer'] as Map<String, dynamic>?;
     final location = json['location'] as Map<String, dynamic>?;
+    final submission = json['submission'] as Map<String, dynamic>?;
+    final geofence = submission?['geofence'] as Map<String, dynamic>?;
+    final evidence = submission?['evidence_photos'] as List<dynamic>? ?? [];
 
     final startTime = json['start_time']?.toString() ?? '';
     final endTime = json['end_time']?.toString() ?? '';
-    final timeRange = (startTime.isNotEmpty && endTime.isNotEmpty)
+    final timeRange = startTime.isNotEmpty && endTime.isNotEmpty
         ? '$startTime – $endTime'
-        : (startTime.isNotEmpty ? startTime : 'সকাল ৮:০০ – বিকাল ৫:০০');
-
-    final status = json['status']?.toString() ?? 'assigned';
-    String statusText;
-    switch (status) {
-      case 'completed':
-        statusText = 'সম্পন্ন';
-        break;
-      case 'in_progress':
-        statusText = 'চলমান';
-        break;
-      case 'late':
-        statusText = 'বাকি';
-        break;
-      default:
-        statusText = 'নির্ধারিত';
-    }
+        : (startTime.isNotEmpty ? startTime : 'সময় নির্ধারিত নেই');
 
     return OwnerTaskPlanModel(
       id: json['id']?.toString() ?? '',
       title: task?['name']?.toString() ?? 'কৃষি কাজ',
       timeRange: timeRange,
-      farmerName: '${farmer?['full_name'] ?? 'চাষী'} (চাষী)',
-      location: location?['name']?.toString() ?? 'খামার মাঠ',
-      statusText: statusText,
-      photoAsset: 'assets/images/vegetable_field.jpg',
+      farmerName: farmer?['full_name']?.toString() ?? 'কৃষক নেই',
+      location: location?['name']?.toString() ?? 'লোকেশন নেই',
+      statusText: OwnerWorkStatus.label(json['status']?.toString() ?? ''),
       scheduledDate: json['scheduled_date']?.toString(),
+      submittedAt: submission?['submitted_at']?.toString(),
+      isPastDeadline: json['is_past_deadline'] == true,
+      hasSubmission: submission != null,
+      geofencePassed: geofence?['passed'] is bool ? geofence!['passed'] as bool : null,
+      isLate: submission?['is_late'] is bool ? submission!['is_late'] as bool : null,
+      photoUrls: evidence.whereType<Map<String, dynamic>>()
+          .map((photo) => photo['url']?.toString() ?? '')
+          .where((url) => url.isNotEmpty).toList(),
     );
   }
 }

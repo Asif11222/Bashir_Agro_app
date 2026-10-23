@@ -16,11 +16,32 @@ class FarmersListScreen extends ConsumerStatefulWidget {
   ConsumerState<FarmersListScreen> createState() => _FarmersListScreenState();
 }
 
-class _FarmersListScreenState extends ConsumerState<FarmersListScreen> {
+class _FarmersListScreenState extends ConsumerState<FarmersListScreen>
+    with WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    Future.microtask(() {
+      if (!mounted) return;
+      if (ref.read(ownerFarmersListProvider).isNotEmpty) {
+        ref.read(ownerFarmersListProvider.notifier).loadFarmers();
+      }
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(ownerFarmersListProvider.notifier).loadFarmers();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     super.dispose();
   }
@@ -153,6 +174,7 @@ class _FarmersListScreenState extends ConsumerState<FarmersListScreen> {
   @override
   Widget build(BuildContext context) {
     final farmers = ref.watch(filteredFarmersProvider);
+    final syncError = ref.watch(ownerFarmersSyncErrorProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAF7),
@@ -160,6 +182,13 @@ class _FarmersListScreenState extends ConsumerState<FarmersListScreen> {
         children: [
           // 1. Lush Header with Farm Scenery, Title and '+' Action
           _buildHeader(context),
+
+          if (syncError)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Text('সর্বশেষ কৃষকের তথ্য সার্ভার থেকে পাওয়া যায়নি। রিফ্রেশ করুন।',
+                style: TextStyle(color: AppColors.errorRed, fontSize: 12)),
+            ),
 
           // 2. Search & Filter Bar
           Padding(
@@ -341,7 +370,7 @@ class _FarmersListScreenState extends ConsumerState<FarmersListScreen> {
 
   Widget _buildHeader(BuildContext context) {
     return OwnerFarmHeaderBackground(
-      height: 155,
+      height: OwnerFarmHeaderBackground.standardHeight,
       child: SafeArea(
         bottom: false,
         child: Padding(

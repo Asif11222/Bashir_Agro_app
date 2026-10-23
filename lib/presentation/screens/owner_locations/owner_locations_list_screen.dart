@@ -160,7 +160,7 @@ class _OwnerLocationsListScreenState extends ConsumerState<OwnerLocationsListScr
 
   Widget _buildHeader(BuildContext context) {
     return OwnerFarmHeaderBackground(
-      height: 140,
+      height: OwnerFarmHeaderBackground.standardHeight,
       child: SafeArea(
         bottom: false,
         child: Padding(

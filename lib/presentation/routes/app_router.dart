@@ -118,8 +118,10 @@ GoRouter createAppRouter({String? initialLocation}) {
       builder: (context, state) => const FarmerActivityScreen(),
     ),
     GoRoute(
-      path: '/owner-photo-details',
-      builder: (context, state) => const OwnerPhotoDetailsScreen(),
+      path: '/owner-photo-details/:assignmentId',
+      builder: (context, state) => OwnerPhotoDetailsScreen(
+        assignmentId: int.tryParse(state.pathParameters['assignmentId'] ?? '') ?? 0,
+      ),
     ),
     GoRoute(
       path: '/locations-list',

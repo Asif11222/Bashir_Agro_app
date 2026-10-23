@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 class OwnerFarmHeaderBackground extends StatelessWidget {
+  static const double standardHeight = 190;
   final double height;
   final Widget child;
 

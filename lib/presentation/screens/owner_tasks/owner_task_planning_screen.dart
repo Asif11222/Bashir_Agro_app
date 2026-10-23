@@ -15,12 +15,14 @@ class OwnerTaskPlanningScreen extends ConsumerStatefulWidget {
   ConsumerState<OwnerTaskPlanningScreen> createState() => _OwnerTaskPlanningScreenState();
 }
 
-class _OwnerTaskPlanningScreenState extends ConsumerState<OwnerTaskPlanningScreen> {
+class _OwnerTaskPlanningScreenState extends ConsumerState<OwnerTaskPlanningScreen>
+    with WidgetsBindingObserver {
   DateTime _currentDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     Future.microtask(() {
       final filter = ref.read(ownerTaskTimeFilterProvider);
       ref.read(ownerPlannedTasksProvider.notifier).loadTasks(
@@ -28,6 +30,22 @@ class _OwnerTaskPlanningScreenState extends ConsumerState<OwnerTaskPlanningScree
             filter: filter,
           );
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(ownerPlannedTasksProvider.notifier).loadTasks(
+        date: _currentDate,
+        filter: ref.read(ownerTaskTimeFilterProvider),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   Future<void> _pickDate(BuildContext context) async {
@@ -107,6 +125,7 @@ class _OwnerTaskPlanningScreenState extends ConsumerState<OwnerTaskPlanningScree
   Widget build(BuildContext context) {
     final selectedFilter = ref.watch(ownerTaskTimeFilterProvider);
     final tasks = ref.watch(ownerPlannedTasksProvider);
+    final loadInfo = ref.watch(ownerTaskLoadInfoProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAF7),
@@ -139,11 +158,23 @@ class _OwnerTaskPlanningScreenState extends ConsumerState<OwnerTaskPlanningScree
                     const SizedBox(height: 12),
 
                     // Total Tasks Summary Banner
-                    _buildTotalTasksBanner(tasks.length, selectedFilter),
+                    if (!loadInfo.loading && loadInfo.error == null)
+                      _buildTotalTasksBanner(tasks.length, selectedFilter),
                     const SizedBox(height: 14),
 
+                    if (loadInfo.loading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 32),
+                        child: CircularProgressIndicator(color: AppColors.primaryGreen),
+                      )
+                    else if (loadInfo.error != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Text(loadInfo.error!,
+                          style: const TextStyle(color: AppColors.errorRed)),
+                      ),
                     // Task Cards List or Empty State
-                    if (tasks.isEmpty)
+                    if (!loadInfo.loading && loadInfo.error == null && tasks.isEmpty)
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
@@ -168,7 +199,7 @@ class _OwnerTaskPlanningScreenState extends ConsumerState<OwnerTaskPlanningScree
                           ),
                         ),
                       )
-                    else
+                    else if (!loadInfo.loading && loadInfo.error == null)
                       ...tasks.map((task) => Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _buildTaskPlanCard(
@@ -253,7 +284,7 @@ class _OwnerTaskPlanningScreenState extends ConsumerState<OwnerTaskPlanningScree
 
   Widget _buildHeader(BuildContext context) {
     return OwnerFarmHeaderBackground(
-      height: 140,
+      height: OwnerFarmHeaderBackground.standardHeight,
       child: SafeArea(
         bottom: false,
         child: Padding(
@@ -502,7 +533,7 @@ class _OwnerTaskPlanningScreenState extends ConsumerState<OwnerTaskPlanningScree
     bool showDateBadge = false,
   }) {
     return InkWell(
-      onTap: () => context.go('/owner-photo-details'),
+      onTap: () => context.push('/owner-photo-details/${task.id}'),
       borderRadius: BorderRadius.circular(18),
       child: Container(
         padding: const EdgeInsets.all(12),
@@ -518,139 +549,209 @@ class _OwnerTaskPlanningScreenState extends ConsumerState<OwnerTaskPlanningScree
             ),
           ],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Thumbnail Image
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: SizedBox(
-                width: 82,
-                height: 82,
-                child: Image.asset(
-                  task.photoAsset,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: const Color(0xFFE2E8F0),
-                    child: const Icon(Icons.image_outlined, color: Colors.grey),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Thumbnail Image
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: SizedBox(
+                    width: 82,
+                    height: 82,
+                    child: task.photoUrls.isNotEmpty
+                        ? Image.network(
+                            task.photoUrls.first,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.grey),
+                          )
+                        : Container(
+                            color: const Color(0xFFE9F5ED),
+                            child: const Icon(Icons.grass_rounded, color: AppColors.primaryGreen, size: 32),
+                          ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 12),
+                const SizedBox(width: 12),
 
-            // Task Details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title + Status Badge
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Task Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          task.title,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E293B),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      _buildStatusPill(task.statusText),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-
-                  // Time Range & Optional Date Badge
-                  Row(
-                    children: [
-                      const Icon(Icons.access_time_rounded, size: 13, color: Color(0xFF64748B)),
-                      const SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                          task.timeRange,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF64748B),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (showDateBadge && task.scheduledDate != null) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE8F5E9),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFC8E6C9)),
-                          ),
-                          child: Text(
-                            DateFormatter.formatShortDate(task.scheduledDate),
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF2E7D32),
+                      // Title + Status Badge
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              task.title,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E293B),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-
-                  // Farmer Name
-                  Row(
-                    children: [
-                      const Icon(Icons.person_outline_rounded, size: 13, color: Color(0xFF64748B)),
-                      const SizedBox(width: 5),
-                      Text(
-                        task.farmerName,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF64748B),
-                        ),
+                          const SizedBox(width: 6),
+                          _buildStatusPill(task.statusText),
+                        ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
+                      const SizedBox(height: 6),
 
-                  // Location
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on_outlined, size: 13, color: Color(0xFF64748B)),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          task.location,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF64748B),
+                      // Time Range & Optional Date Badge
+                      Row(
+                        children: [
+                          const Icon(Icons.access_time_rounded, size: 13, color: Color(0xFF64748B)),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Text(
+                              task.timeRange,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF64748B),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          if (showDateBadge && task.scheduledDate != null) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE8F5E9),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFC8E6C9)),
+                              ),
+                              child: Text(
+                                DateFormatter.formatShortDate(task.scheduledDate),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2E7D32),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+
+                      // Farmer Name
+                      Row(
+                        children: [
+                          const Icon(Icons.person_outline_rounded, size: 13, color: Color(0xFF64748B)),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              task.farmerName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+
+                      // Location
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on_outlined, size: 13, color: Color(0xFF64748B)),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              task.location,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF64748B),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 4),
+                ),
+                const SizedBox(width: 4),
 
-            // Chevron
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: Color(0xFF94A3B8),
-              size: 20,
+                // Chevron
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Color(0xFF94A3B8),
+                  size: 20,
+                ),
+              ],
             ),
+            if (task.isPastDeadline && !task.isCompleted && task.statusText != 'বাতিল')
+              Padding(
+                padding: const EdgeInsets.only(top: 7),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: _buildVerificationBadge('সময়সীমা পেরিয়েছে', false),
+                ),
+              ),
+            if (task.isCompleted && task.hasSubmission) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 5,
+                  runSpacing: 4,
+                  children: [
+                  if (task.completionIssueLabel != null)
+                    _buildVerificationBadge(
+                      task.completionIssueLabel!,
+                      task.geofencePassed != false && task.isLate != true,
+                    ),
+                  if (task.geofencePassed != null)
+                    _buildVerificationBadge(
+                      task.geofencePassed! ? 'সঠিক লোকেশনে' : 'লোকেশনের বাইরে',
+                      task.geofencePassed!,
+                    ),
+                  if (task.isLate != null)
+                    _buildVerificationBadge(
+                      task.isLate! ? 'সময় পেরিয়েছে' : 'সময়ের মধ্যে',
+                      !task.isLate!,
+                    ),
+                  if (task.submittedAt != null)
+                    _buildVerificationBadge('জমা: ${DateFormatter.formatDateTimeToBanglaTime(task.submittedAt)}', true),
+                  _buildVerificationBadge('${DateFormatter.toBanglaDigits(task.photoUrls.length.toString())}টি ছবি', true),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildVerificationBadge(String label, bool positive) {
+    final critical = label == 'লোকেশনের বাইরে' || label == 'সময় পেরিয়েছে' || label == 'সময়সীমা পেরিয়েছে';
+    final bg = positive ? const Color(0xFFDCFCE7)
+        : (critical ? const Color(0xFFFEE2E2) : const Color(0xFFFEF3C7));
+    final fg = positive ? const Color(0xFF15803D)
+        : (critical ? const Color(0xFFB91C1C) : const Color(0xFFB45309));
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(positive ? Icons.check_circle_rounded : Icons.error_rounded, size: 12, color: fg),
+          const SizedBox(width: 3),
+          Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: fg)),
+        ],
       ),
     );
   }
@@ -660,10 +761,14 @@ class _OwnerTaskPlanningScreenState extends ConsumerState<OwnerTaskPlanningScree
     Color fg;
     Color border;
 
-    if (status == 'নির্ধারিত') {
+    if (status == 'নির্ধারিত' || status == 'সম্পন্ন') {
       bg = const Color(0xFFE8F5E9);
       fg = const Color(0xFF2E7D32);
       border = const Color(0xFFC8E6C9);
+    } else if (status == 'বাতিল' || status == 'দেরি') {
+      bg = const Color(0xFFFEE2E2);
+      fg = const Color(0xFFB91C1C);
+      border = const Color(0xFFFECACA);
     } else if (status == 'চলমান') {
       bg = const Color(0xFFFEF3C7);
       fg = const Color(0xFFB45309);
