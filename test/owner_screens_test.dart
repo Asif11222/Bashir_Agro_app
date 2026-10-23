@@ -9,8 +9,37 @@ import 'package:bashir_agro_app_2/presentation/screens/owner_photos/owner_photo_
 import 'package:bashir_agro_app_2/presentation/screens/owner_locations/owner_locations_list_screen.dart';
 import 'package:bashir_agro_app_2/presentation/screens/owner_locations/owner_location_map_screen.dart';
 import 'package:bashir_agro_app_2/data/models/owner_models.dart';
+import 'package:bashir_agro_app_2/presentation/widgets/owner_farm_header.dart';
 
 void main() {
+  testWidgets('Admin banner titles stay within the header on narrow screens',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: OwnerFarmPageHeader(
+              title: 'আজকের কাজের পরিকল্পনা',
+              subtitle: 'খামারের সব কাজ এক নজরে',
+              onBack: () {},
+              actionIcon: Icons.calendar_month_rounded,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('আজকের কাজের পরিকল্পনা'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Owner Dashboard renders greeting and metric cards', (tester) async {
     await tester.pumpWidget(
       const ProviderScope(

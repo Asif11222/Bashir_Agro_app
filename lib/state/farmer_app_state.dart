@@ -104,6 +104,22 @@ class FarmerAuthNotifier extends Notifier<FarmerAuthState> {
     }
   }
 
+  /// Refresh externally edited web profile photos when the app returns to foreground.
+  Future<void> refreshIdentity() async {
+    if (!state.isAuthenticated) return;
+    try {
+      final api = ref.read(apiServiceProvider);
+      final user = await api.getMe();
+      FarmerProfile? profile = state.profile;
+      if (user.isFarmer) {
+        profile = await api.getFarmerProfile();
+      }
+      state = state.copyWith(user: user, profile: profile);
+    } catch (_) {
+      // Retain cached identity and image if offline.
+    }
+  }
+
   Future<void> logout() async {
     final authService = ref.read(authServiceProvider);
     await authService.logout();

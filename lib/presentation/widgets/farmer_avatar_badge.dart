@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 class FarmerAvatarBadge extends StatelessWidget {
   final String name;
+  final String? imageUrl;
   final double size;
   final bool hasGamcha;
   final bool hasBeard;
@@ -11,21 +12,22 @@ class FarmerAvatarBadge extends StatelessWidget {
   const FarmerAvatarBadge({
     super.key,
     required this.name,
+    this.imageUrl,
     this.size = 54,
     this.hasGamcha = false,
     this.hasBeard = false,
     this.isElderly = false,
   });
 
-  factory FarmerAvatarBadge.fromName(String name, {double size = 54}) {
+  factory FarmerAvatarBadge.fromName(String name, {double size = 54, String? imageUrl}) {
     if (name.contains('করিম') || name.contains('হানিফ')) {
-      return FarmerAvatarBadge(name: name, size: size, isElderly: true, hasBeard: true);
+      return FarmerAvatarBadge(name: name, size: size, imageUrl: imageUrl, isElderly: true, hasBeard: true);
     } else if (name.contains('জহিরুল') || name.contains('সেলিম')) {
-      return FarmerAvatarBadge(name: name, size: size, hasGamcha: true, hasBeard: false);
+      return FarmerAvatarBadge(name: name, size: size, imageUrl: imageUrl, hasGamcha: true, hasBeard: false);
     } else if (name.contains('কামাল')) {
-      return FarmerAvatarBadge(name: name, size: size, hasBeard: true);
+      return FarmerAvatarBadge(name: name, size: size, imageUrl: imageUrl, hasBeard: true);
     } else {
-      return FarmerAvatarBadge(name: name, size: size);
+      return FarmerAvatarBadge(name: name, size: size, imageUrl: imageUrl);
     }
   }
 
@@ -46,17 +48,24 @@ class FarmerAvatarBadge extends StatelessWidget {
         ],
       ),
       child: ClipOval(
-        child: CustomPaint(
-          size: Size(size, size),
-          painter: _FarmerAvatarPainter(
-            hasGamcha: hasGamcha,
-            hasBeard: hasBeard,
-            isElderly: isElderly,
-          ),
-        ),
+        child: (imageUrl != null && (Uri.tryParse(imageUrl!)?.hasScheme ?? false) &&
+            (imageUrl!.startsWith('https://') || imageUrl!.startsWith('http://')))
+          ? Image.network(imageUrl!, width: size, height: size, fit: BoxFit.cover,
+              cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).round(),
+              errorBuilder: (_, _, _) => _fallbackImage())
+          : _fallbackImage(),
       ),
     );
   }
+
+  Widget _fallbackImage() => CustomPaint(
+    size: Size(size, size),
+    painter: _FarmerAvatarPainter(
+      hasGamcha: hasGamcha,
+      hasBeard: hasBeard,
+      isElderly: isElderly,
+    ),
+  );
 }
 
 class _FarmerAvatarPainter extends CustomPainter {

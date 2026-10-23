@@ -6,6 +6,7 @@ import '../../../models/notification_model.dart';
 import '../../../state/app_state.dart';
 import '../../../state/farmer_app_state.dart';
 import '../../widgets/farmer_bottom_nav_bar.dart';
+import '../../widgets/owner_bottom_nav_bar.dart';
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
@@ -14,6 +15,7 @@ class NotificationsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notifications = ref.watch(notificationStateProvider);
     final unreadCount = notifications.where((n) => !n.isRead).length;
+    final isOwner = ref.watch(farmerAuthProvider).user?.isOwner ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
@@ -29,7 +31,7 @@ class NotificationsScreen extends ConsumerWidget {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/dashboard');
+              context.go(isOwner ? '/owner-dashboard' : '/dashboard');
             }
           },
         ),
@@ -105,7 +107,9 @@ class NotificationsScreen extends ConsumerWidget {
                   },
                 ),
         ),
-      bottomNavigationBar: const FarmerBottomNavBar(currentIndex: 2),
+      bottomNavigationBar: isOwner
+          ? const OwnerBottomNavBar(currentIndex: -1)
+          : const FarmerBottomNavBar(currentIndex: 2),
     );
   }
 

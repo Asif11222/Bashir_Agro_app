@@ -9,6 +9,8 @@ import '../../../services/task_service.dart';
 import '../../../state/app_state.dart';
 import '../../../state/farmer_app_state.dart';
 import '../../widgets/farm_graphics.dart';
+import '../../widgets/farmer_avatar_badge.dart';
+import '../../../state/app_appearance.dart';
 import '../../widgets/task_card.dart';
 import '../../widgets/completed_task_card.dart';
 import '../../widgets/farmer_bottom_nav_bar.dart';
@@ -257,6 +259,7 @@ class _FarmerDashboardScreenState extends ConsumerState<FarmerDashboardScreen>
     final tasksAsync = ref.watch(taskListProvider);
     final user = ref.watch(currentUserProvider);
     final authState = ref.watch(farmerAuthProvider);
+    final headerStyle = ref.watch(appAppearanceProvider).value?.forScreen('farmer_dashboard') ?? const HeaderStyle({});
     final currentFilter = ref.watch(taskTabFilterProvider);
     final syncState = ref.watch(offlineSyncProvider);
     final notifications = ref.watch(notificationStateProvider);
@@ -283,20 +286,15 @@ class _FarmerDashboardScreenState extends ConsumerState<FarmerDashboardScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'আজকের কাজ',
+                        Text(
+                          headerStyle.label('title', 'আজকের কাজ'),
+                          maxLines: 2, overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 24,
+                            fontSize: headerStyle.fontSize + 5,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: headerStyle.titleColor,
                             letterSpacing: 0.2,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black45,
-                                offset: Offset(0, 1.5),
-                                blurRadius: 4,
-                              ),
-                            ],
+                            shadows: headerStyle.shadows,
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -315,6 +313,10 @@ class _FarmerDashboardScreenState extends ConsumerState<FarmerDashboardScreen>
                             ],
                           ),
                         ),
+                        if (headerStyle.label('subtitle', '').isNotEmpty)
+                          Text(headerStyle.label('subtitle', ''), maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 11.5, color: headerStyle.titleColor)),
                       ],
                     ),
                   ),
@@ -399,7 +401,11 @@ class _FarmerDashboardScreenState extends ConsumerState<FarmerDashboardScreen>
           Expanded(
             child: RefreshIndicator(
               color: AppColors.primaryGreen,
-              onRefresh: () async => _syncTasks(),
+              onRefresh: () async {
+                ref.invalidate(appAppearanceProvider);
+                await ref.read(farmerAuthProvider.notifier).refreshIdentity();
+                await _syncTasks();
+              },
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   return SingleChildScrollView(
@@ -498,7 +504,7 @@ class _FarmerDashboardScreenState extends ConsumerState<FarmerDashboardScreen>
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          const FarmerAvatar(size: 64),
+                          FarmerAvatarBadge(name: authState.profile?.fullName ?? 'কৃষক', size: 64, imageUrl: authState.profile?.profilePhotoUrl),
                           const SizedBox(width: 14),
                           Expanded(
                             child: Column(

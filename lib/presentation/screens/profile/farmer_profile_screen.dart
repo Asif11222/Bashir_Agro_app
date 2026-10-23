@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../state/farmer_app_state.dart';
 import '../../widgets/farm_graphics.dart';
+import '../../widgets/farmer_avatar_badge.dart';
 import '../../widgets/farmer_bottom_nav_bar.dart';
 
 class FarmerProfileScreen extends ConsumerWidget {
@@ -97,7 +98,7 @@ class FarmerProfileScreen extends ConsumerWidget {
                 ),
                 child: Column(
                   children: [
-                    const FarmerAvatar(size: 80),
+                    FarmerAvatarBadge(name: profile?.fullName ?? user?.name ?? 'কৃষক', size: 80, imageUrl: profile?.profilePhotoUrl),
                     const SizedBox(height: 12),
                     Text(
                       profile?.fullName ?? user?.name ?? 'কৃষক',

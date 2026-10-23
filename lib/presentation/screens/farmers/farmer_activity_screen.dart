@@ -42,10 +42,14 @@ class FarmerActivityScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFFF7FAF7),
       body: Column(
         children: [
-          // 1. Curved Green Header with Profile Card Overlay
-          _buildHeaderWithProfile(context, farmer),
-
-          // 2. Timeline and Content
+          // Keep the green banner under the white system status icons.
+          OwnerFarmPageHeader(
+      screenKey: 'farmer_activity',
+            title: 'কৃষকের কার্যক্রম',
+            onBack: () => context.go('/farmers-list'),
+            actionIcon: Icons.calendar_month_rounded,
+          ),
+          // Allow the identity card and timeline to scroll on short screens.
           Expanded(
             child: RefreshIndicator(
               color: AppColors.primaryGreen,
@@ -57,81 +61,88 @@ class FarmerActivityScreen extends ConsumerWidget {
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 child: Column(
                   children: [
-                    // Filter Tabs: আজকের, ৭ দিন, ৩০ দিন
-                    _buildFilterTabs(ref, selectedFilter),
-                    const SizedBox(height: 16),
+                    _buildFarmerIdentityCard(farmer),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      child: Column(
+                        children: [
+                          // Filter Tabs: আজকের, ৭ দিন, ৩০ দিন
+                          _buildFilterTabs(ref, selectedFilter),
+                          const SizedBox(height: 16),
 
-                    // Connected Vertical Timeline with Real API Data
-                    activitiesAsync.when(
-                      data: (activities) {
-                        final now = DateTime.now();
-                        final begin = DateTime(now.year, now.month, now.day)
-                            .subtract(
-                              Duration(
-                                days: selectedFilter == '৩০ দিন'
-                                    ? 29
-                                    : selectedFilter == '৭ দিন'
-                                    ? 6
-                                    : 0,
-                              ),
-                            );
-                        final end = DateTime(now.year, now.month, now.day + 1);
-                        final shown = activities.where((activity) {
-                          final date = DateTime.tryParse(
-                            activity.scheduledDate,
-                          );
-                          return date != null &&
-                              !date.isBefore(begin) &&
-                              date.isBefore(end);
-                        }).toList();
-                        if (shown.isEmpty) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 40,
-                              horizontal: 16,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(0xFFE8ECE8),
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                '$selectedFilter কোনো কার্যক্রম পাওয়া যায়নি।',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Color(0xFF64748B),
-                                  fontWeight: FontWeight.w500,
+                          // Connected Vertical Timeline with Real API Data
+                          activitiesAsync.when(
+                            data: (activities) {
+                              final now = DateTime.now();
+                              final begin = DateTime(now.year, now.month, now.day)
+                                  .subtract(
+                                    Duration(
+                                      days: selectedFilter == '৩০ দিন'
+                                          ? 29
+                                          : selectedFilter == '৭ দিন'
+                                          ? 6
+                                          : 0,
+                                    ),
+                                  );
+                              final end = DateTime(now.year, now.month, now.day + 1);
+                              final shown = activities.where((activity) {
+                                final date = DateTime.tryParse(
+                                  activity.scheduledDate,
+                                );
+                                return date != null &&
+                                    !date.isBefore(begin) &&
+                                    date.isBefore(end);
+                              }).toList();
+                              if (shown.isEmpty) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 40,
+                                    horizontal: 16,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: const Color(0xFFE8ECE8),
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '$selectedFilter কোনো কার্যক্রম পাওয়া যায়নি।',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF64748B),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+                              return _buildTimelineList(context, shown);
+                            },
+                            loading: () => const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: AppColors.primaryGreen,
                                 ),
                               ),
                             ),
-                          );
-                        }
-                        return _buildTimelineList(context, shown);
-                      },
-                      loading: () => const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 40),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.primaryGreen,
+                            error: (err, _) => Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                'তথ্য লোড করতে সমস্যা হয়েছে: $err',
+                                style: const TextStyle(color: AppColors.errorRed),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      error: (err, _) => Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          'তথ্য লোড করতে সমস্যা হয়েছে: $err',
-                          style: const TextStyle(color: AppColors.errorRed),
-                        ),
+                        ],
                       ),
                     ),
                   ],
@@ -147,182 +158,124 @@ class FarmerActivityScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeaderWithProfile(BuildContext context, FarmerItemModel farmer) {
-    return Stack(
-      children: [
-        // Green Curved Header Top Banner with Scenery
-        OwnerFarmHeaderBackground(
-          height: OwnerFarmHeaderBackground.standardHeight,
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  IconButton(
-                    onPressed: () => context.go('/farmers-list'),
-                    icon: const Icon(
-                      Icons.arrow_back_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const Expanded(
-                    child: Text(
-                      'কৃষকের কার্যক্রম',
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.20),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.calendar_month_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                ],
-              ),
+  Widget _buildFarmerIdentityCard(FarmerItemModel farmer) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
             ),
-          ),
+          ],
         ),
-
-        // Floating Profile Card with proper bottom clearance
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 144, 16, 12),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    FarmerAvatarBadge.fromName(farmer.name, size: 54),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                FarmerAvatarBadge(name: farmer.name, size: 54, imageUrl: farmer.avatarPath),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        farmer.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        farmer.phone.isNotEmpty
+                            ? farmer.phone
+                            : 'ফোন নম্বর সংযুক্ত নেই',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
                         children: [
-                          Text(
-                            farmer.name,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E293B),
-                            ),
+                          const Icon(
+                            Icons.location_on_rounded,
+                            size: 13,
+                            color: Color(0xFF94A3B8),
                           ),
-                          const SizedBox(height: 3),
-                          Text(
-                            farmer.phone.isNotEmpty
-                                ? farmer.phone
-                                : 'ফোন নম্বর সংযুক্ত নেই',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF64748B),
+                          const SizedBox(width: 2),
+                          Flexible(
+                            child: Text(
+                              farmer.region,
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                color: Color(0xFF64748B),
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.location_on_rounded,
-                                size: 13,
-                                color: Color(0xFF94A3B8),
-                              ),
-                              const SizedBox(width: 2),
-                              Flexible(
-                                child: Text(
-                                  farmer.region,
-                                  style: const TextStyle(
-                                    fontSize: 11.5,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
                           ),
                         ],
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: farmer.isAssigned
-                            ? const Color(0xFFE8F5E9)
-                            : const Color(0xFFFFF3E0),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: farmer.isAssigned
-                              ? const Color(0xFFC8E6C9)
-                              : const Color(0xFFFFE0B2),
-                        ),
-                      ),
-                      child: Text(
-                        farmer.isAssigned ? 'নিয়োজিত' : 'অনিয়োজিত',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: farmer.isAssigned
-                              ? AppColors.primaryGreen
-                              : const Color(0xFFE65100),
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 12),
-                const Divider(height: 1, color: Color(0xFFF1F5F1)),
-                const SizedBox(height: 12),
-
-                Row(
-                  children: [
-                    _buildStatItem(
-                      'জমি এলাকা',
-                      farmer.landArea > 0
-                          ? '${farmer.landArea} একর'
-                          : 'তথ্য নেই',
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: farmer.isAssigned
+                        ? const Color(0xFFE8F5E9)
+                        : const Color(0xFFFFF3E0),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: farmer.isAssigned
+                          ? const Color(0xFFC8E6C9)
+                          : const Color(0xFFFFE0B2),
                     ),
-                    _buildStatItem('মূল কার্যক্রম', farmer.farmType),
-                    _buildStatItem('অগ্রগতি', '${farmer.progressPercent}%'),
-                  ],
+                  ),
+                  child: Text(
+                    farmer.isAssigned ? 'নিয়োজিত' : 'অনিয়োজিত',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: farmer.isAssigned
+                          ? AppColors.primaryGreen
+                          : const Color(0xFFE65100),
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: Color(0xFFF1F5F1)),
+            const SizedBox(height: 12),
+
+            Row(
+              children: [
+                _buildStatItem(
+                  'জমি এলাকা',
+                  farmer.landArea > 0
+                      ? '${farmer.landArea} একর'
+                      : 'তথ্য নেই',
+                ),
+                _buildStatItem('মূল কার্যক্রম', farmer.farmType),
+                _buildStatItem('অগ্রগতি', '${farmer.progressPercent}%'),
+              ],
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

@@ -25,38 +25,13 @@ class OwnerPhotoDetailsScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFFF7FAF7),
       body: Column(
         children: [
-          OwnerFarmHeaderBackground(
-            height: OwnerFarmHeaderBackground.standardHeight,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => context.canPop()
-                          ? context.pop()
-                          : context.go('/owner-tasks'),
-                      icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                    ),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('কাজের বিস্তারিত',
-                            style: TextStyle(color: Colors.white,
-                              fontSize: 20, fontWeight: FontWeight.bold)),
-                          Text('প্রমাণ, সময় ও অবস্থান যাচাই',
-                            style: TextStyle(color: Color(0xFFE8F5E9), fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          OwnerFarmPageHeader(
+      screenKey: 'owner_photos',
+            title: 'কাজের বিস্তারিত',
+            subtitle: 'প্রমাণ, সময় ও অবস্থান যাচাই',
+            onBack: () => context.canPop()
+                ? context.pop()
+                : context.go('/owner-tasks'),
           ),
           Expanded(
             child: detail == null

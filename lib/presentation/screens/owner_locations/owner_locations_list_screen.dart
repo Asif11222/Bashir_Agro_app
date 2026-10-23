@@ -159,88 +159,12 @@ class _OwnerLocationsListScreenState extends ConsumerState<OwnerLocationsListScr
   }
 
   Widget _buildHeader(BuildContext context) {
-    return OwnerFarmHeaderBackground(
-      height: OwnerFarmHeaderBackground.standardHeight,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Back Button
-              IconButton(
-                onPressed: () => context.go('/owner-dashboard'),
-                icon: const Icon(
-                  Icons.arrow_back_rounded,
-                  color: Colors.white,
-                  size: 24,
-                ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const SizedBox(width: 8),
-
-              // Location Pin Icon Badge
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.20),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.location_on_rounded,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // Title and Subtitle
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'খামারের লোকেশনসমূহ',
-                      style: TextStyle(
-                        fontSize: 18.5,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'অ্যাডমিন প্যানেলে যুক্ত সকল প্লট ও জমি',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFFE8F5E9),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Map Preview Quick Icon
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.20),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.map_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return OwnerFarmPageHeader(
+      screenKey: 'owner_locations',
+      title: 'খামারের লোকেশনসমূহ',
+      subtitle: 'অ্যাডমিন প্যানেলে যুক্ত সকল প্লট ও জমি',
+      onBack: () => context.go('/owner-dashboard'),
+      actionIcon: Icons.map_rounded,
     );
   }
 

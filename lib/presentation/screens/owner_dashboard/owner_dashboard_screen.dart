@@ -10,6 +10,7 @@ import '../../../state/owner_state.dart';
 import '../../widgets/owner_farm_header.dart';
 import '../../widgets/owner_bottom_nav_bar.dart';
 import '../../widgets/farmer_avatar_badge.dart';
+import '../../../state/app_appearance.dart';
 
 class OwnerDashboardScreen extends ConsumerStatefulWidget {
   const OwnerDashboardScreen({super.key});
@@ -80,6 +81,9 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
+        final maxListHeight = MediaQuery.sizeOf(ctx).height * 0.56;
+        final listHeight = ((locations.length + 1) * 56.0)
+            .clamp(56.0, maxListHeight).toDouble();
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -92,26 +96,42 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen>
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
-                ListTile(
-                  title: const Text('সব লোকেশন'),
-                  trailing: currentLocation == null
-                      ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreen)
-                      : null,
-                  onTap: () {
-                    ref.read(ownerDashboardProvider.notifier).loadDashboard(clearLocation: true);
-                    Navigator.pop(ctx);
-                  },
+                SizedBox(
+                  height: listHeight,
+                  child: ListView.builder(
+                    itemCount: locations.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        return ListTile(
+                          title: const Text('সব লোকেশন'),
+                          trailing: currentLocation == null
+                              ? const Icon(Icons.check_circle_rounded,
+                                  color: AppColors.primaryGreen)
+                              : null,
+                          onTap: () {
+                            ref.read(ownerDashboardProvider.notifier)
+                                .loadDashboard(clearLocation: true);
+                            Navigator.pop(ctx);
+                          },
+                        );
+                      }
+                      final location = locations[index - 1];
+                      return ListTile(
+                        title: Text(location.name,
+                            maxLines: 2, overflow: TextOverflow.ellipsis),
+                        trailing: currentLocation?.id == location.id
+                            ? const Icon(Icons.check_circle_rounded,
+                                color: AppColors.primaryGreen)
+                            : null,
+                        onTap: () {
+                          ref.read(ownerDashboardProvider.notifier)
+                              .loadDashboard(location: location);
+                          Navigator.pop(ctx);
+                        },
+                      );
+                    },
+                  ),
                 ),
-                ...locations.map((loc) => ListTile(
-                      title: Text(loc.name),
-                      trailing: currentLocation?.id == loc.id
-                          ? const Icon(Icons.check_circle_rounded, color: AppColors.primaryGreen)
-                          : null,
-                      onTap: () {
-                        ref.read(ownerDashboardProvider.notifier).loadDashboard(location: loc);
-                        Navigator.pop(ctx);
-                      },
-                    )),
               ],
             ),
           ),
@@ -135,6 +155,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen>
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
+                ref.invalidate(appAppearanceProvider);
                 await ref.read(ownerDashboardProvider.notifier).loadDashboard();
               },
               color: AppColors.primaryGreen,
@@ -374,7 +395,9 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen>
         ? authUser!.name
         : (currentUser?.name.isNotEmpty == true ? currentUser!.name : 'আব্দুল রহমান');
 
+    final style = ref.watch(appAppearanceProvider).value?.forScreen('owner_dashboard') ?? const HeaderStyle({});
     return OwnerFarmHeaderBackground(
+      screenKey: 'owner_dashboard',
       height: OwnerFarmHeaderBackground.standardHeight,
       child: SafeArea(
         bottom: false,
@@ -390,17 +413,22 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'শুভ সকাল,',
+                        Text(
+                          style.label('title', 'শুভ সকাল,'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
+                            fontSize: style.fontSize,
+                            color: style.titleColor,
                             fontWeight: FontWeight.w500,
+                            shadows: style.shadows,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           ownerName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -409,12 +437,10 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen>
                           ),
                         ),
                         const SizedBox(height: 4),
-                        const Text(
-                          'ফার্মের সব কার্যক্রম এক নজরে দেখুন',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: Color(0xFFE8F5E9),
-                          ),
+                        Text(
+                          style.label('subtitle', 'ফার্মের সব কার্যক্রম এক নজরে দেখুন'),
+                          maxLines: 2, overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12.5, color: style.titleColor.withValues(alpha: 0.88), shadows: style.shadows),
                         ),
                       ],
                     ),
@@ -422,7 +448,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen>
 
                   // Bell Notification Icon
                   InkWell(
-                    onTap: () => context.go('/notifications'),
+                    onTap: () => context.push('/notifications'),
                     borderRadius: BorderRadius.circular(21),
                     child: Container(
                       width: 42,
@@ -456,10 +482,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen>
                       ],
                     ),
                     child: ClipOval(
-                      child: FarmerAvatarBadge.fromName(
-                        ownerName,
-                        size: 48,
-                      ),
+                      child: FarmerAvatarBadge(name: ownerName, size: 48, imageUrl: authUser?.profilePhotoUrl),
                     ),
                   ),
                 ],
@@ -628,7 +651,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen>
         child: Row(
           children: [
             // Farmer Avatar
-            FarmerAvatarBadge.fromName(farmer.name, size: 46),
+            FarmerAvatarBadge(name: farmer.name, size: 46, imageUrl: farmer.avatarPath),
             const SizedBox(width: 12),
 
             // Name & Region + Farm Type

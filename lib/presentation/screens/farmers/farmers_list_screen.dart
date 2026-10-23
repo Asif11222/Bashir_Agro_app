@@ -369,75 +369,14 @@ class _FarmersListScreenState extends ConsumerState<FarmersListScreen>
   }
 
   Widget _buildHeader(BuildContext context) {
-    return OwnerFarmHeaderBackground(
-      height: OwnerFarmHeaderBackground.standardHeight,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Back Button
-                  IconButton(
-                    onPressed: () => context.go('/owner-dashboard'),
-                    icon: const Icon(
-                      Icons.arrow_back_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-
-                  // Title
-                  const Text(
-                    'কৃষকদের তালিকা',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-
-                  // Add Farmer (+) Button
-                  InkWell(
-                    onTap: () => _addNewFarmerDialog(context),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.add_rounded,
-                        color: AppColors.primaryGreen,
-                        size: 22,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              const Center(
-                child: Text(
-                  'সকল কৃষকের বিবরণ ও বর্তমান অবস্থা',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: Color(0xFFE8F5E9),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return OwnerFarmPageHeader(
+      screenKey: 'farmers_list',
+      title: 'কৃষকদের তালিকা',
+      subtitle: 'সকল কৃষকের বিবরণ ও বর্তমান অবস্থা',
+      onBack: () => context.go('/owner-dashboard'),
+      actionIcon: Icons.add_rounded,
+      onAction: () => _addNewFarmerDialog(context),
+      filledAction: true,
     );
   }
 
@@ -465,7 +404,7 @@ class _FarmersListScreenState extends ConsumerState<FarmersListScreen>
         child: Row(
           children: [
             // Farmer Avatar Badge
-            FarmerAvatarBadge.fromName(farmer.name, size: 52),
+            FarmerAvatarBadge(name: farmer.name, size: 52, imageUrl: farmer.avatarPath),
             const SizedBox(width: 14),
 
             // Name, Phone & Location

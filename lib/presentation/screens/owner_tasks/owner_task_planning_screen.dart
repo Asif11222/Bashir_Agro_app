@@ -283,97 +283,13 @@ class _OwnerTaskPlanningScreenState extends ConsumerState<OwnerTaskPlanningScree
   }
 
   Widget _buildHeader(BuildContext context) {
-    return OwnerFarmHeaderBackground(
-      height: OwnerFarmHeaderBackground.standardHeight,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Back Button
-                  IconButton(
-                    onPressed: () => context.go('/owner-dashboard'),
-                    icon: const Icon(
-                      Icons.arrow_back_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Eco Plant Icon
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.20),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.eco_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-
-                  // Title and Subtitle
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'আজকের কাজের পরিকল্পনা',
-                          style: TextStyle(
-                            fontSize: 18.5,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'খামারের সব কাজ এক নজরে',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFFE8F5E9),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Calendar Icon Button (Interactive)
-                  InkWell(
-                    onTap: () => _pickDate(context),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.20),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.calendar_month_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    return OwnerFarmPageHeader(
+      screenKey: 'owner_tasks',
+      title: 'আজকের কাজের পরিকল্পনা',
+      subtitle: 'খামারের সব কাজ এক নজরে',
+      onBack: () => context.go('/owner-dashboard'),
+      actionIcon: Icons.calendar_month_rounded,
+      onAction: () => _pickDate(context),
     );
   }
 
