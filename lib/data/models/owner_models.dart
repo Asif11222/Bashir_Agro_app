@@ -27,20 +27,78 @@ class FarmerItemModel {
   });
 
   factory FarmerItemModel.fromJson(Map<String, dynamic> json) {
+    // 1. Determine isAssigned from API boolean or integer, or fallback
+    bool assigned =
+        json['is_assigned'] == true ||
+        json['is_assigned'] == 1 ||
+        json['is_assigned'] == '1';
+
+    final locations = json['locations'] as List<dynamic>?;
+    if (!assigned && json['is_assigned'] == null) {
+      if (locations != null && locations.isNotEmpty) {
+        assigned = true;
+      }
+      final totalTasks =
+          int.tryParse(json['total_tasks']?.toString() ?? '0') ?? 0;
+      if (totalTasks > 0) {
+        assigned = true;
+      }
+      final activeTasks =
+          int.tryParse(json['active_tasks']?.toString() ?? '0') ?? 0;
+      if (activeTasks > 0) {
+        assigned = true;
+      }
+    }
+
+    String region = json['region']?.toString() ?? '';
+    if (region.isEmpty && locations != null && locations.isNotEmpty) {
+      final firstLoc = locations.first;
+      if (firstLoc is Map<String, dynamic>) {
+        region = firstLoc['name']?.toString() ?? '';
+      }
+    }
+    if (region.isEmpty) {
+      region = json['address']?.toString() ?? 'বাংলাদেশ';
+    }
+
+    double landArea = (json['land_area'] is num)
+        ? (json['land_area'] as num).toDouble()
+        : 0.0;
+    if (landArea <= 0.0 && locations != null && locations.isNotEmpty) {
+      for (final loc in locations) {
+        if (loc is Map<String, dynamic>) {
+          final area = loc['area'];
+          if (area is num) {
+            landArea += area.toDouble();
+          }
+        }
+      }
+    }
+    if (landArea <= 0.0) {
+      landArea = 4.0;
+    }
+
     return FarmerItemModel(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? json['full_name']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
-      region: json['region']?.toString() ?? 'বাংলাদেশ',
-      farmType: json['farm_type']?.toString() ?? json['primary_activity']?.toString() ?? 'কৃষি চাষ',
+      region: region,
+      farmType:
+          json['farm_type']?.toString() ??
+          json['primary_activity']?.toString() ??
+          'কৃষি চাষ',
       progressPercent: json['progress_percent'] is int
           ? json['progress_percent']
           : int.tryParse(json['progress_percent']?.toString() ?? '0') ?? 0,
-      isAssigned: json['is_assigned'] == true,
+      isAssigned: assigned,
       avatarPath: json['profile_photo_url']?.toString() ?? '',
-      landArea: (json['land_area'] is num) ? (json['land_area'] as num).toDouble() : 0.0,
+      landArea: (json['land_area'] is num)
+          ? (json['land_area'] as num).toDouble()
+          : 0.0,
       farmingCategories: json['farming_categories'] is List
-          ? (json['farming_categories'] as List).map((e) => e.toString()).toList()
+          ? (json['farming_categories'] as List)
+                .map((e) => e.toString())
+                .toList()
           : const [],
     );
   }
@@ -49,13 +107,19 @@ class FarmerItemModel {
 class OwnerWorkStatus {
   static String label(String status) {
     switch (status) {
-      case 'completed': return 'সম্পন্ন';
-      case 'in_progress': return 'চলমান';
-      case 'cancelled': return 'বাতিল';
-      case 'late': return 'দেরি';
+      case 'completed':
+        return 'সম্পন্ন';
+      case 'in_progress':
+        return 'চলমান';
+      case 'cancelled':
+        return 'বাতিল';
+      case 'late':
+        return 'দেরি';
       case 'assigned':
-      case 'pending': return 'নির্ধারিত';
-      default: return 'অজানা';
+      case 'pending':
+        return 'নির্ধারিত';
+      default:
+        return 'অজানা';
     }
   }
 
@@ -108,17 +172,24 @@ class FarmerActivityItemModel {
     return FarmerActivityItemModel(
       id: json['id']?.toString() ?? '',
       title: task?['name']?.toString() ?? 'কৃষি কাজ',
-      description: json['notes']?.toString() ?? task?['instructions']?.toString() ?? '',
+      description:
+          json['notes']?.toString() ?? task?['instructions']?.toString() ?? '',
       time: startTime.isEmpty ? date : '$date ($startTime)',
       scheduledDate: date,
       location: location?['name']?.toString() ?? 'লোকেশন নেই',
       statusText: OwnerWorkStatus.label(json['status']?.toString() ?? ''),
       submittedAt: submission?['submitted_at']?.toString(),
-      geofencePassed: geofence?['passed'] is bool ? geofence!['passed'] as bool : null,
-      isLate: submission?['is_late'] is bool ? submission!['is_late'] as bool : null,
-      photoUrls: evidence.whereType<Map<String, dynamic>>()
+      geofencePassed: geofence?['passed'] is bool
+          ? geofence!['passed'] as bool
+          : null,
+      isLate: submission?['is_late'] is bool
+          ? submission!['is_late'] as bool
+          : null,
+      photoUrls: evidence
+          .whereType<Map<String, dynamic>>()
           .map((photo) => photo['url']?.toString() ?? '')
-          .where((url) => url.isNotEmpty).toList(),
+          .where((url) => url.isNotEmpty)
+          .toList(),
     );
   }
 }
@@ -185,11 +256,17 @@ class OwnerTaskPlanModel {
       submittedAt: submission?['submitted_at']?.toString(),
       isPastDeadline: json['is_past_deadline'] == true,
       hasSubmission: submission != null,
-      geofencePassed: geofence?['passed'] is bool ? geofence!['passed'] as bool : null,
-      isLate: submission?['is_late'] is bool ? submission!['is_late'] as bool : null,
-      photoUrls: evidence.whereType<Map<String, dynamic>>()
+      geofencePassed: geofence?['passed'] is bool
+          ? geofence!['passed'] as bool
+          : null,
+      isLate: submission?['is_late'] is bool
+          ? submission!['is_late'] as bool
+          : null,
+      photoUrls: evidence
+          .whereType<Map<String, dynamic>>()
           .map((photo) => photo['url']?.toString() ?? '')
-          .where((url) => url.isNotEmpty).toList(),
+          .where((url) => url.isNotEmpty)
+          .toList(),
     );
   }
 }
@@ -218,7 +295,8 @@ class OwnerDashboardKpis {
           : int.tryParse(json['total_farmers']?.toString() ?? '0') ?? 0,
       newFarmersThisMonth: json['new_farmers_this_month'] is int
           ? json['new_farmers_this_month']
-          : int.tryParse(json['new_farmers_this_month']?.toString() ?? '0') ?? 0,
+          : int.tryParse(json['new_farmers_this_month']?.toString() ?? '0') ??
+                0,
       todayTasks: json['today_tasks'] is int
           ? json['today_tasks']
           : int.tryParse(json['today_tasks']?.toString() ?? '0') ?? 0,
@@ -278,7 +356,9 @@ class OwnerLocationItem {
         : double.tryParse(json['longitude']?.toString() ?? '');
 
     return OwnerLocationItem(
-      id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
       name: json['name']?.toString() ?? '',
       locationCode: json['location_code']?.toString() ?? 'LOC-${json['id']}',
       type: json['type']?.toString() ?? 'খামার জমি',
@@ -292,7 +372,8 @@ class OwnerLocationItem {
       boundary: json['boundary'] ?? json['boundary_geojson'],
       geofenceRadiusMeters: json['geofence_radius_meters'] is int
           ? json['geofence_radius_meters']
-          : int.tryParse(json['geofence_radius_meters']?.toString() ?? '20') ?? 20,
+          : int.tryParse(json['geofence_radius_meters']?.toString() ?? '20') ??
+                20,
       status: json['status']?.toString() ?? 'active',
       farmersCount: json['farmers_count'] is int
           ? json['farmers_count']
