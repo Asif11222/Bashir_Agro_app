@@ -11,6 +11,7 @@ import '../../../state/app_state.dart';
 import '../../../state/farmer_app_state.dart';
 import '../../widgets/farm_graphics.dart';
 import '../../widgets/field_boundary_preview_card.dart';
+import 'completed_task_details_view.dart';
 
 class TaskDetailsScreen extends ConsumerWidget {
   const TaskDetailsScreen({super.key});
@@ -31,6 +32,15 @@ class TaskDetailsScreen extends ConsumerWidget {
     if (task == null) {
       return const Scaffold(
         body: Center(child: Text('কাজের বিবরণ খুঁজে পাওয়া যায়নি')),
+      );
+    }
+
+    // Authoritative Completed/Submitted Task Details View
+    if (task.status == TaskStatus.completed || task.status == TaskStatus.submitted) {
+      return CompletedTaskDetailsView(
+        task: task,
+        activeAssignment: activeAssignment,
+        onBack: () => context.pop(),
       );
     }
 

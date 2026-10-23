@@ -202,6 +202,7 @@ class _PhotoReviewScreenState extends ConsumerState<PhotoReviewScreen> {
         final apiService = ref.read(apiServiceProvider);
         final sessionPhotos = ref.read(cameraSessionProvider);
         final List<Uint8List> photoBytesList = [];
+        final List<Map<String, dynamic>> photoMetadataList = [];
         final compressionService = ImageCompressionService();
 
         if (sessionPhotos.isNotEmpty) {
@@ -210,6 +211,13 @@ class _PhotoReviewScreenState extends ConsumerState<PhotoReviewScreen> {
               final raw = await File(p.localPath).readAsBytes();
               final comp = await compressionService.compressImage(raw, targetMaxKb: 800);
               photoBytesList.add(comp.compressedBytes);
+              photoMetadataList.add({
+                'latitude': p.latitude,
+                'longitude': p.longitude,
+                'accuracy': p.gpsAccuracy,
+                'inside_geofence': p.insideGeofence,
+                'captured_at': p.capturedAt.toIso8601String(),
+              });
             }
           }
         }
@@ -219,8 +227,22 @@ class _PhotoReviewScreenState extends ConsumerState<PhotoReviewScreen> {
             final raw = await File(photo.localPath).readAsBytes();
             final comp = await compressionService.compressImage(raw, targetMaxKb: 800);
             photoBytesList.add(comp.compressedBytes);
+            photoMetadataList.add({
+              'latitude': photo.latitude,
+              'longitude': photo.longitude,
+              'accuracy': photo.gpsAccuracy,
+              'inside_geofence': photo.insideGeofence,
+              'captured_at': photo.capturedAt.toIso8601String(),
+            });
           } else {
             photoBytesList.add(compressionService.generateSimulatedPhotoBytes('evidence'));
+            photoMetadataList.add({
+              'latitude': lat,
+              'longitude': lng,
+              'accuracy': accuracy,
+              'inside_geofence': true,
+              'captured_at': DateTime.now().toIso8601String(),
+            });
           }
         }
 
@@ -231,6 +253,7 @@ class _PhotoReviewScreenState extends ConsumerState<PhotoReviewScreen> {
           accuracy: accuracy,
           notes: notes.isNotEmpty ? notes : null,
           photoBytesList: photoBytesList,
+          photoMetadata: photoMetadataList,
           overrideGeofence: overrideGeofence,
         );
 

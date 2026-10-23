@@ -1,5 +1,6 @@
 import 'task_photo_model.dart';
 import '../../models/field_boundary_model.dart';
+import '../../models/task_assignment_model.dart';
 
 enum TaskStatus {
   scheduled,
@@ -48,6 +49,7 @@ class TaskModel {
   final double? distanceMeters;
   final String? submittedAt; // e.g. "সকাল ৯:১৫"
   final List<String> evidencePhotoUrls;
+  final List<SubmittedPhotoDetail> submittedPhotos;
 
   const TaskModel({
     required this.id,
@@ -81,6 +83,7 @@ class TaskModel {
     this.distanceMeters,
     this.submittedAt,
     this.evidencePhotoUrls = const [],
+    this.submittedPhotos = const [],
   });
 
   CompletedSubmissionType get completedSubmissionType {
@@ -126,6 +129,7 @@ class TaskModel {
     double? distanceMeters,
     String? submittedAt,
     List<String>? evidencePhotoUrls,
+    List<SubmittedPhotoDetail>? submittedPhotos,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -159,6 +163,7 @@ class TaskModel {
       distanceMeters: distanceMeters ?? this.distanceMeters,
       submittedAt: submittedAt ?? this.submittedAt,
       evidencePhotoUrls: evidencePhotoUrls ?? this.evidencePhotoUrls,
+      submittedPhotos: submittedPhotos ?? this.submittedPhotos,
     );
   }
 }

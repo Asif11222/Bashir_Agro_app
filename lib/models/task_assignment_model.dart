@@ -253,6 +253,78 @@ class TaskAssignmentModel {
   };
 }
 
+class SubmittedPhotoDetail {
+  final int id;
+  final String url;
+  final double? latitude;
+  final double? longitude;
+  final String? capturedAt;
+  final String? caption;
+  final bool? insideGeofence;
+  final bool? isLate;
+
+  const SubmittedPhotoDetail({
+    required this.id,
+    required this.url,
+    this.latitude,
+    this.longitude,
+    this.capturedAt,
+    this.caption,
+    this.insideGeofence,
+    this.isLate,
+  });
+
+  factory SubmittedPhotoDetail.fromJson(Map<String, dynamic> json) {
+    return SubmittedPhotoDetail(
+      id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      url: json['url']?.toString() ?? json['file_path']?.toString() ?? '',
+      latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
+      longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
+      capturedAt: json['captured_at']?.toString(),
+      caption: json['caption']?.toString(),
+      insideGeofence: json['inside_geofence'] != null
+          ? (json['inside_geofence'] == true || json['inside_geofence'] == 1)
+          : null,
+      isLate: json['is_late'] != null
+          ? (json['is_late'] == true || json['is_late'] == 1)
+          : null,
+    );
+  }
+
+  SubmittedPhotoDetail copyWith({
+    int? id,
+    String? url,
+    double? latitude,
+    double? longitude,
+    String? capturedAt,
+    String? caption,
+    bool? insideGeofence,
+    bool? isLate,
+  }) {
+    return SubmittedPhotoDetail(
+      id: id ?? this.id,
+      url: url ?? this.url,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      capturedAt: capturedAt ?? this.capturedAt,
+      caption: caption ?? this.caption,
+      insideGeofence: insideGeofence ?? this.insideGeofence,
+      isLate: isLate ?? this.isLate,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'url': url,
+    'latitude': latitude,
+    'longitude': longitude,
+    'captured_at': capturedAt,
+    'caption': caption,
+    'inside_geofence': insideGeofence,
+    'is_late': isLate,
+  };
+}
+
 class TaskSubmissionSummary {
   final int id;
   final bool geofencePassed;
@@ -262,6 +334,7 @@ class TaskSubmissionSummary {
   final String? status;
   final String? verificationStatus;
   final List<String> photoUrls;
+  final List<SubmittedPhotoDetail> photosDetailed;
 
   const TaskSubmissionSummary({
     required this.id,
@@ -272,11 +345,23 @@ class TaskSubmissionSummary {
     this.status,
     this.verificationStatus,
     this.photoUrls = const [],
+    this.photosDetailed = const [],
   });
 
   factory TaskSubmissionSummary.fromJson(Map<String, dynamic> json) {
     bool geoPassed = true;
     double? dist;
+    double? subLat;
+    double? subLng;
+    if (json['coordinates'] is Map) {
+      final c = json['coordinates'] as Map<String, dynamic>;
+      subLat = (c['latitude'] as num?)?.toDouble();
+      subLng = (c['longitude'] as num?)?.toDouble();
+    } else {
+      subLat = json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null;
+      subLng = json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null;
+    }
+
     if (json['geofence'] is Map) {
       final g = json['geofence'] as Map<String, dynamic>;
       geoPassed = g['passed'] == true;
@@ -286,17 +371,47 @@ class TaskSubmissionSummary {
     }
 
     final bool late = json['is_late'] == true || json['is_late'] == 1;
+    final String? submittedAtStr = json['submitted_at']?.toString();
 
     final List<String> photos = [];
+    final List<SubmittedPhotoDetail> detailedPhotos = [];
+
     if (json['evidence_photos'] is List) {
       for (final p in json['evidence_photos'] as List) {
-        if (p is Map && p['url'] != null) {
-          photos.add(p['url'].toString());
+        if (p is Map) {
+          final pMap = Map<String, dynamic>.from(p);
+          final detail = SubmittedPhotoDetail.fromJson(pMap);
+          final effectivePhoto = (detail.latitude == null && subLat != null)
+              ? detail.copyWith(
+                  latitude: subLat,
+                  longitude: subLng,
+                  capturedAt: detail.capturedAt ?? submittedAtStr,
+                  insideGeofence: detail.insideGeofence ?? geoPassed,
+                )
+              : detail;
+          detailedPhotos.add(effectivePhoto);
+          if (effectivePhoto.url.isNotEmpty) photos.add(effectivePhoto.url);
         }
       }
     } else if (json['photos'] is List) {
+      int idx = 0;
       for (final p in json['photos'] as List) {
-        if (p != null) photos.add(p.toString());
+        idx++;
+        if (p != null) {
+          final urlStr = p.toString();
+          photos.add(urlStr);
+          detailedPhotos.add(
+            SubmittedPhotoDetail(
+              id: idx,
+              url: urlStr,
+              latitude: subLat,
+              longitude: subLng,
+              capturedAt: submittedAtStr,
+              insideGeofence: geoPassed,
+              isLate: late,
+            ),
+          );
+        }
       }
     }
 
@@ -305,10 +420,11 @@ class TaskSubmissionSummary {
       geofencePassed: geoPassed,
       distanceMeters: dist,
       isLate: late,
-      submittedAt: json['submitted_at']?.toString(),
+      submittedAt: submittedAtStr,
       status: json['status']?.toString(),
       verificationStatus: json['verification_status']?.toString(),
       photoUrls: photos,
+      photosDetailed: detailedPhotos,
     );
   }
 }

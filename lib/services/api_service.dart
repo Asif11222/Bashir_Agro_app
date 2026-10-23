@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
@@ -95,6 +96,7 @@ class ApiService {
     double? accuracy,
     String? notes,
     List<Uint8List>? photoBytesList,
+    List<Map<String, dynamic>>? photoMetadata,
     bool overrideGeofence = false,
   }) async {
     final fields = <String, String>{
@@ -109,6 +111,9 @@ class ApiService {
     }
     if (overrideGeofence) {
       fields['override_geofence'] = '1';
+    }
+    if (photoMetadata != null && photoMetadata.isNotEmpty) {
+      fields['photo_metadata'] = jsonEncode(photoMetadata);
     }
 
     final files = <http.MultipartFile>[];

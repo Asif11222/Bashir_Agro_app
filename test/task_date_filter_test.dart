@@ -67,12 +67,22 @@ void main() {
       endTime: '10:00',
     );
 
-    final allTasks = [taskToday, taskFuture, taskPast, taskCompleted];
+    final taskTodayCompleted = TaskAssignmentModel(
+      id: 5,
+      scheduledDate: todayStr,
+      status: 'completed',
+      startTime: '14:00',
+      endTime: '16:00',
+    );
 
-    test('filterTodayTasks does NOT include future tasks', () {
+    final allTasks = [taskToday, taskFuture, taskPast, taskCompleted, taskTodayCompleted];
+
+    test('filterTodayTasks includes all today tasks (completed or incomplete)', () {
       final todayTasks = taskService.filterTodayTasks(allTasks);
-      expect(todayTasks.any((t) => t.id == 2), isFalse);
-      expect(todayTasks.any((t) => t.id == 1), isTrue);
+      expect(todayTasks.any((t) => t.id == 1), isTrue); // Today incomplete
+      expect(todayTasks.any((t) => t.id == 5), isTrue); // Today completed
+      expect(todayTasks.any((t) => t.id == 2), isFalse); // Future
+      expect(todayTasks.any((t) => t.id == 3), isFalse); // Past
     });
 
     test('filterUpcomingTasks includes only future incomplete tasks', () {
@@ -81,14 +91,25 @@ void main() {
       expect(upcomingTasks.any((t) => t.id == 1), isFalse);
       expect(upcomingTasks.any((t) => t.id == 3), isFalse);
       expect(upcomingTasks.any((t) => t.id == 4), isFalse); // Completed task should not be in upcoming
+      expect(upcomingTasks.any((t) => t.id == 5), isFalse);
     });
 
-    test('filterPendingTasks includes all active tasks', () {
+    test('filterPendingTasks includes only past incomplete tasks (overdue)', () {
       final pendingTasks = taskService.filterPendingTasks(allTasks);
-      expect(pendingTasks.any((t) => t.id == 1), isTrue);
-      expect(pendingTasks.any((t) => t.id == 2), isTrue);
-      expect(pendingTasks.any((t) => t.id == 3), isTrue);
-      expect(pendingTasks.any((t) => t.id == 4), isFalse);
+      expect(pendingTasks.any((t) => t.id == 3), isTrue); // Past incomplete
+      expect(pendingTasks.any((t) => t.id == 1), isFalse); // Today task stays in today
+      expect(pendingTasks.any((t) => t.id == 2), isFalse); // Future task stays in upcoming
+      expect(pendingTasks.any((t) => t.id == 4), isFalse); // Completed
+      expect(pendingTasks.any((t) => t.id == 5), isFalse); // Completed
+    });
+
+    test('filterCompletedTasks includes only completed tasks across all dates', () {
+      final completedTasks = taskService.filterCompletedTasks(allTasks);
+      expect(completedTasks.any((t) => t.id == 4), isTrue);
+      expect(completedTasks.any((t) => t.id == 5), isTrue);
+      expect(completedTasks.any((t) => t.id == 1), isFalse);
+      expect(completedTasks.any((t) => t.id == 2), isFalse);
+      expect(completedTasks.any((t) => t.id == 3), isFalse);
     });
   });
 }

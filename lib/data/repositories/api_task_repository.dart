@@ -93,9 +93,25 @@ class ApiTaskRepository implements TaskRepository {
   Future<void> submitTask(String taskId) async {
     final index = _cachedTasks.indexWhere((t) => t.id == taskId);
     if (index != -1) {
+      final current = _cachedTasks[index];
+      final List<SubmittedPhotoDetail> detailed = [];
+      for (int i = 0; i < current.photos.length; i++) {
+        final p = current.photos[i];
+        detailed.add(SubmittedPhotoDetail(
+          id: i + 1,
+          url: p.localPath,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          capturedAt: p.capturedAt.toIso8601String(),
+          insideGeofence: p.insideGeofence,
+          isLate: current.isLate,
+        ));
+      }
+
       _cachedTasks[index] = _cachedTasks[index].copyWith(
         status: TaskStatus.completed,
         badgeText: 'সম্পন্ন',
+        submittedPhotos: detailed.isNotEmpty ? detailed : _cachedTasks[index].submittedPhotos,
       );
     }
   }
@@ -254,8 +270,23 @@ class ApiTaskRepository implements TaskRepository {
     final bool isSubmissionLate = sub?.isLate ?? (assignment.status == 'late' || isOverdueTime);
     final bool? geoPassed = sub?.geofencePassed;
     final double? dist = sub?.distanceMeters;
-    final String submittedAtStr = DateFormatter.formatDateTimeToBanglaTime(sub?.submittedAt ?? assignment.completedAt);
     final List<String> photoUrls = sub?.photoUrls ?? [];
+    final List<SubmittedPhotoDetail> detailedPhotos = List<SubmittedPhotoDetail>.from(sub?.photosDetailed ?? []);
+    if (detailedPhotos.isEmpty && photoUrls.isNotEmpty) {
+      for (int i = 0; i < photoUrls.length; i++) {
+        detailedPhotos.add(
+          SubmittedPhotoDetail(
+            id: i + 1,
+            url: photoUrls[i],
+            latitude: assignment.location?.latitude,
+            longitude: assignment.location?.longitude,
+            capturedAt: sub?.submittedAt,
+            insideGeofence: geoPassed,
+            isLate: isSubmissionLate,
+          ),
+        );
+      }
+    }
 
     return TaskModel(
       id: assignment.id.toString(),
@@ -286,8 +317,9 @@ class ApiTaskRepository implements TaskRepository {
       completedAt: assignment.completedAt,
       geofencePassed: geoPassed,
       distanceMeters: dist,
-      submittedAt: submittedAtStr,
+      submittedAt: sub?.submittedAt,
       evidencePhotoUrls: photoUrls,
+      submittedPhotos: detailedPhotos,
     );
   }
 }
