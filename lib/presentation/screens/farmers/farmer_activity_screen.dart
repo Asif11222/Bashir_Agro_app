@@ -451,6 +451,30 @@ class FarmerActivityScreen extends ConsumerWidget {
     );
   }
 
+  Color _getTimelineDotColor(FarmerActivityItemModel activity) {
+    return activity.isCompleted
+        ? AppColors.primaryGreen
+        : const Color(0xFF94A3B8);
+  }
+
+  IconData _getTimelineDotIcon(FarmerActivityItemModel activity) {
+    return activity.isCompleted
+        ? Icons.check_rounded
+        : Icons.schedule_rounded;
+  }
+
+  Color _getBadgeBgColor(FarmerActivityItemModel activity) {
+    return activity.isCompleted
+        ? const Color(0xFFDCFCE7)
+        : const Color(0xFFFFF3E0);
+  }
+
+  Color _getBadgeTextColor(FarmerActivityItemModel activity) {
+    return activity.isCompleted
+        ? AppColors.primaryGreen
+        : const Color(0xFFE65100);
+  }
+
   Widget _buildActivityCard(
     BuildContext context,
     FarmerActivityItemModel activity,
@@ -525,7 +549,6 @@ class FarmerActivityScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          activity.statusText,
                           activity.statusText,
                           style: TextStyle(
                             fontSize: 10,
