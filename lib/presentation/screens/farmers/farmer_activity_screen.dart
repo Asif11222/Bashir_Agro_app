@@ -8,6 +8,7 @@ import '../../../state/owner_state.dart';
 import '../../widgets/owner_bottom_nav_bar.dart';
 import '../../widgets/farmer_avatar_badge.dart';
 import '../../widgets/owner_farm_header.dart';
+import '../../widgets/farm_graphics.dart';
 
 class FarmerActivityScreen extends ConsumerWidget {
   const FarmerActivityScreen({super.key});
@@ -454,26 +455,10 @@ class FarmerActivityScreen extends ConsumerWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: SizedBox(
-                width: 72,
-                height: 72,
-                child: activity.photoUrls.isNotEmpty
-                    ? Image.network(
-                        activity.photoUrls.first,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) =>
-                            const Icon(Icons.broken_image_outlined),
-                      )
-                    : Container(
-                        color: const Color(0xFFE9F5ED),
-                        child: const Icon(
-                          Icons.grass_rounded,
-                          color: AppColors.primaryGreen,
-                        ),
-                      ),
-              ),
+            TaskThumbnailWidget(
+              type: activity.thumbnailType,
+              size: 72,
+              borderRadius: 14,
             ),
             const SizedBox(width: 12),
             Expanded(
