@@ -109,4 +109,62 @@ void main() {
     expect(activity.isCompleted, false);
     expect(activity.scheduledDate, '2026-10-21');
   });
+
+  test('Farmer task engagement lifecycle (unassigned -> assigned -> completed unassigned)', () {
+    // 1. Before task assignment: no active tasks, unassigned
+    final beforeAssignment = FarmerItemModel.fromJson({
+      'id': 5,
+      'name': 'Sakib',
+      'is_assigned': false,
+      'active_tasks': 0,
+      'total_tasks': 0,
+      'completed_tasks': 0,
+    });
+    expect(beforeAssignment.isAssigned, false);
+
+    // 2. After task assigned (active / in-progress / pending / late): assigned
+    final afterAssignment = FarmerItemModel.fromJson({
+      'id': 5,
+      'name': 'Sakib',
+      'is_assigned': true,
+      'active_tasks': 1,
+      'total_tasks': 1,
+      'completed_tasks': 0,
+    });
+    expect(afterAssignment.isAssigned, true);
+
+    // 3. After task finished/completed: back to unassigned
+    final afterCompletion = FarmerItemModel.fromJson({
+      'id': 5,
+      'name': 'Sakib',
+      'is_assigned': false,
+      'active_tasks': 0,
+      'total_tasks': 1,
+      'completed_tasks': 1,
+    });
+    expect(afterCompletion.isAssigned, false);
+
+    // 4. Null flag fallback when active_tasks > 0
+    final nullFlagWithActive = FarmerItemModel.fromJson({
+      'id': 5,
+      'name': 'Sakib',
+      'is_assigned': null,
+      'active_tasks': 1,
+      'total_tasks': 1,
+      'completed_tasks': 0,
+    });
+    expect(nullFlagWithActive.isAssigned, true);
+
+    // 5. Null flag fallback when total_tasks > completed_tasks
+    final nullFlagWithPending = FarmerItemModel.fromJson({
+      'id': 5,
+      'name': 'Sakib',
+      'is_assigned': null,
+      'active_tasks': null,
+      'total_tasks': 2,
+      'completed_tasks': 1,
+    });
+    expect(nullFlagWithPending.isAssigned, true);
+  });
 }
+

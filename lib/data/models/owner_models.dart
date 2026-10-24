@@ -27,15 +27,17 @@ class FarmerItemModel {
   });
 
   factory FarmerItemModel.fromJson(Map<String, dynamic> json) {
-    // The server is authoritative: only unfinished assignments mean engaged.
-    // Never infer assignment from a location or historical/completed task count.
+    final total = int.tryParse(json['total_tasks']?.toString() ?? '0') ?? 0;
+    final completed = int.tryParse(json['completed_tasks']?.toString() ?? '0') ?? 0;
+    final active = int.tryParse(json['active_tasks']?.toString() ?? '0') ?? 0;
+
     final assignmentFlag = json['is_assigned'];
     final bool assigned = assignmentFlag == true ||
         assignmentFlag == 1 ||
         assignmentFlag == '1' ||
         assignmentFlag == 'true' ||
         (assignmentFlag == null &&
-            (int.tryParse(json['active_tasks']?.toString() ?? '0') ?? 0) > 0);
+            (active > 0 || (total > 0 && total > completed)));
 
     final locations = json['locations'] as List<dynamic>?;
     String region = json['region']?.toString() ?? '';
@@ -88,6 +90,32 @@ class FarmerItemModel {
                 .map((e) => e.toString())
                 .toList()
           : const [],
+    );
+  }
+
+  FarmerItemModel copyWith({
+    String? id,
+    String? name,
+    String? phone,
+    String? region,
+    String? farmType,
+    int? progressPercent,
+    bool? isAssigned,
+    String? avatarPath,
+    double? landArea,
+    List<String>? farmingCategories,
+  }) {
+    return FarmerItemModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
+      region: region ?? this.region,
+      farmType: farmType ?? this.farmType,
+      progressPercent: progressPercent ?? this.progressPercent,
+      isAssigned: isAssigned ?? this.isAssigned,
+      avatarPath: avatarPath ?? this.avatarPath,
+      landArea: landArea ?? this.landArea,
+      farmingCategories: farmingCategories ?? this.farmingCategories,
     );
   }
 }

@@ -182,7 +182,19 @@ class OwnerFarmersListNotifier extends Notifier<List<FarmerItemModel>> {
       final dateStr = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
       final list = await apiService.getFarmersList(search: search, status: status, date: dateStr);
       if (version != _loadVersion) return;
-      state = list.map((e) => FarmerItemModel.fromJson(e)).toList();
+      final dashFarmers = ref.read(ownerDashboardProvider).farmers;
+      final dashAssignedMap = {
+        for (final df in dashFarmers) df.id: df.isAssigned,
+      };
+
+      state = list.map((e) {
+        final rawId = e['id']?.toString() ?? '';
+        final model = FarmerItemModel.fromJson(e);
+        if (e['is_assigned'] == null && e['active_tasks'] == null && dashAssignedMap.containsKey(rawId)) {
+          return model.copyWith(isAssigned: dashAssignedMap[rawId]!);
+        }
+        return model;
+      }).toList();
       ref.read(ownerFarmersSyncErrorProvider.notifier).setError(false);
     } catch (_) {
       if (version != _loadVersion) return;
