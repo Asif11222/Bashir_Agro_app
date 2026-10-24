@@ -1,6 +1,138 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../state/app_appearance.dart';
 
-class OwnerFarmHeaderBackground extends StatelessWidget {
+/// Shared responsive title layout for admin pages with the illustrated banner.
+/// Keeps header actions outside the text area at narrow device widths.
+class OwnerFarmPageHeader extends ConsumerWidget {
+  final String screenKey;
+  final String title;
+  final String? subtitle;
+  final VoidCallback onBack;
+  final IconData? actionIcon;
+  final VoidCallback? onAction;
+  final bool filledAction;
+
+  const OwnerFarmPageHeader({
+    super.key,
+    required this.title,
+    this.screenKey = 'owner_tasks',
+    required this.onBack,
+    this.subtitle,
+    this.actionIcon,
+    this.onAction,
+    this.filledAction = false,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final style = ref.watch(appAppearanceProvider).value?.forScreen(screenKey) ??
+        const HeaderStyle({});
+    final shownSubtitle = style.label('subtitle', subtitle ?? '');
+    return OwnerFarmHeaderBackground(
+      height: OwnerFarmHeaderBackground.standardHeight,
+      screenKey: screenKey,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  SizedBox(
+                    width: 42,
+                    height: 42,
+                    child: IconButton(
+                      onPressed: onBack,
+                      tooltip: 'ফিরে যান',
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      style.label('title', title),
+                      textAlign: style.textAlign,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: style.fontSize,
+                        height: 1.24,
+                        fontWeight: FontWeight.bold,
+                        color: style.titleColor,
+                        shadows: style.shadows,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 42,
+                    height: 42,
+                    child: actionIcon == null
+                        ? const SizedBox.shrink()
+                        : DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: filledAction
+                                  ? Colors.white
+                                  : Colors.white.withValues(alpha: 0.20),
+                              shape: BoxShape.circle,
+                            ),
+                            child: onAction == null
+                                ? Icon(
+                                    actionIcon,
+                                    color: filledAction
+                                        ? const Color(0xFF006B3B)
+                                        : Colors.white,
+                                    size: 23,
+                                  )
+                                : IconButton(
+                                    onPressed: onAction,
+                                    padding: EdgeInsets.zero,
+                                    icon: Icon(
+                                      actionIcon,
+                                      color: filledAction
+                                          ? const Color(0xFF006B3B)
+                                          : Colors.white,
+                                      size: 23,
+                                    ),
+                                  ),
+                          ),
+                  ),
+                ],
+              ),
+              if (shownSubtitle.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  shownSubtitle,
+                  textAlign: style.textAlign,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.3,
+                    fontWeight: FontWeight.w500,
+                    color: style.titleColor.withValues(alpha: 0.90),
+                    shadows: style.shadows,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class OwnerFarmHeaderBackground extends ConsumerWidget {
+  final String screenKey;
+  static const double standardHeight = 190;
   final double height;
   final Widget child;
 
@@ -8,10 +140,12 @@ class OwnerFarmHeaderBackground extends StatelessWidget {
     super.key,
     required this.height,
     required this.child,
+    this.screenKey = 'owner_dashboard',
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final style = ref.watch(appAppearanceProvider).value?.forScreen(screenKey) ?? const HeaderStyle({});
     return Container(
       height: height,
       width: double.infinity,
@@ -45,9 +179,15 @@ class OwnerFarmHeaderBackground extends StatelessWidget {
             ),
 
             // Farm Scenery with Greenhouse, Pond, Barn & Cows
-            CustomPaint(
-              painter: _OwnerFarmSceneryPainter(),
-            ),
+            if (style.imageUrl == null)
+              CustomPaint(painter: _OwnerFarmSceneryPainter())
+            else
+              Image.network(
+                style.imageUrl!,
+                fit: BoxFit.cover,
+                cacheWidth: (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round().clamp(320, 1440).toInt(),
+                errorBuilder: (_, _, _) => CustomPaint(painter: _OwnerFarmSceneryPainter()),
+              ),
 
             // Soft top gradient for crisp text legibility
             Container(
@@ -56,7 +196,7 @@ class OwnerFarmHeaderBackground extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withValues(alpha: 0.35),
+                    Colors.black.withValues(alpha: style.overlay),
                     Colors.black.withValues(alpha: 0.05),
                     Colors.transparent,
                   ],

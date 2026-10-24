@@ -47,45 +47,34 @@ class ApiTaskRepository implements TaskRepository {
 
   @override
   Future<void> addPhotoToTask(String taskId, TaskPhotoModel photo) async {
-    final index = _cachedTasks.indexWhere((t) => t.id == taskId);
-    if (index != -1) {
-      final updatedPhotos = List<TaskPhotoModel>.from(_cachedTasks[index].photos)..add(photo);
-      _cachedTasks[index] = _cachedTasks[index].copyWith(
-        photos: updatedPhotos,
-        status: TaskStatus.inProgress,
-        badgeText: 'চলছে',
-      );
+    final index = _cachedTasks.indexWhere((task) => task.id == taskId);
+    if (index >= 0) {
+      final photos = List<TaskPhotoModel>.from(_cachedTasks[index].photos)..add(photo);
+      _cachedTasks[index] = _cachedTasks[index].copyWith(photos: photos);
     }
-
-    final assignmentId = int.tryParse(taskId.replaceAll(RegExp(r'[^0-9]'), ''));
-    if (assignmentId != null) {
-      try {
-        await _apiService.startAssignment(assignmentId);
-      } catch (_) {
-        // Offline handling or ignore if already in progress
+    final assignmentId = int.tryParse(taskId);
+    if (assignmentId != null && assignmentId > 0) {
+      final confirmed = await _apiService.startAssignment(assignmentId);
+      if (index >= 0) {
+        _cachedTasks[index] = _cachedTasks[index].copyWith(
+          status: TaskStatus.inProgress,
+          badgeText: 'চলছে',
+          startedAt: confirmed.startedAt,
+        );
       }
     }
   }
 
   @override
   Future<void> startTask(String taskId) async {
-    final nowIso = DateTime.now().toIso8601String();
-    final index = _cachedTasks.indexWhere((t) => t.id == taskId);
-    if (index != -1) {
-      _cachedTasks[index] = _cachedTasks[index].copyWith(
-        status: TaskStatus.inProgress,
-        badgeText: 'চলছে',
-        startedAt: _cachedTasks[index].startedAt ?? nowIso,
-      );
+    final assignmentId = int.tryParse(taskId);
+    if (assignmentId == null || assignmentId <= 0) {
+      throw StateError('Invalid assignment ID');
     }
-
-    final assignmentId = int.tryParse(taskId.replaceAll(RegExp(r'[^0-9]'), ''));
-    if (assignmentId != null) {
-      try {
-        await _apiService.startAssignment(assignmentId);
-      } catch (_) {
-        // Offline handling
-      }
+    final confirmed = await _apiService.startAssignment(assignmentId);
+    final index = _cachedTasks.indexWhere((task) => task.id == taskId);
+    if (index >= 0) {
+      _cachedTasks[index] = taskModelFromAssignment(confirmed);
     }
   }
 
@@ -152,32 +141,8 @@ class ApiTaskRepository implements TaskRepository {
       _cachedTasks.insert(0, taskModel);
       return taskModel;
     } catch (_) {
-      // Fallback local task for offline or mock mode
-      final nowFormatted = DateFormatter.formatDateTimeToBanglaTime(DateTime.now().toIso8601String());
-      final fallbackTask = TaskModel(
-        id: 'self_${DateTime.now().millisecondsSinceEpoch}',
-        title: description.length > 25 ? '${description.substring(0, 23)}...' : description,
-        subTitle: 'স্ব-প্রতিবেদিত কাজ',
-        ownerId: '1',
-        ownerName: 'বশির এগ্রো',
-        farmName: 'ফার্ম',
-        locationId: farmLocationId?.toString() ?? '1',
-        locationName: locationName ?? 'বাস্তব জিপিএস অবস্থান',
-        fullAddress: locationName ?? 'বাস্তব জিপিএস অবস্থান',
-        timeRange: 'এখনই সম্পন্ন',
-        date: 'আজ',
-        description: description,
-        instructions: description,
-        status: TaskStatus.completed,
-        badgeText: 'সম্পন্ন',
-        thumbnailType: 'plant',
-        isLate: false,
-        geofencePassed: true,
-        submittedAt: nowFormatted,
-        evidencePhotoUrls: photoPath != null ? [photoPath] : [],
-      );
-      _cachedTasks.insert(0, fallbackTask);
-      return fallbackTask;
+      // Do not report an unacknowledged submission as completed.
+      rethrow;
     }
   }
 

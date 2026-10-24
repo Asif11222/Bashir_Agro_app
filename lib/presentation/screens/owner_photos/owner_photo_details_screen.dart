@@ -3,586 +3,225 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../data/models/owner_models.dart';
+import '../../../models/task_assignment_model.dart';
+import '../../../state/owner_state.dart';
 import '../../widgets/owner_bottom_nav_bar.dart';
 import '../../widgets/owner_farm_header.dart';
 
+/// Only shows an actual server assignment. Never supplies demo GPS/photo/status data.
 class OwnerPhotoDetailsScreen extends ConsumerWidget {
-  const OwnerPhotoDetailsScreen({super.key});
+  final int assignmentId;
+
+  const OwnerPhotoDetailsScreen({super.key, required this.assignmentId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final detail = assignmentId > 0
+        ? ref.watch(ownerAssignmentDetailsProvider(assignmentId))
+        : null;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAF7),
       body: Column(
         children: [
-          // 1. Curved Green Header
-          _buildHeader(context),
-
-          // 2. Scrollable Photo & Geofence Details
+          OwnerFarmPageHeader(
+      screenKey: 'owner_photos',
+            title: 'কাজের বিস্তারিত',
+            subtitle: 'প্রমাণ, সময় ও অবস্থান যাচাই',
+            onBack: () => context.canPop()
+                ? context.pop()
+                : context.go('/owner-tasks'),
+          ),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Hero Photo (Farmer Spraying Field)
-                  _buildHeroPhoto(),
-                  const SizedBox(height: 12),
-
-                  // "সঠিক অবস্থান" Verification Status Card
-                  _buildStatusVerificationCard(),
-                  const SizedBox(height: 12),
-
-                  // Date and Time (2-Column Cards)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildInfoCard(
-                          icon: Icons.calendar_today_rounded,
-                          iconColor: const Color(0xFF1E8E3E),
-                          iconBgColor: const Color(0xFFE6F4EA),
-                          label: 'তোলার তারিখ',
-                          value: DateFormatter.formatFullDateWithDay().split(',').first.trim(),
-                          subValue: DateFormatter.formatFullDateWithDay().contains(',')
-                              ? DateFormatter.formatFullDateWithDay().split(',').last.trim()
-                              : 'আজকের দিন',
+            child: detail == null
+                ? const Center(child: Text('কাজের সঠিক পরিচিতি পাওয়া যায়নি।'))
+                : detail.when(
+                    loading: () => const Center(
+                      child: CircularProgressIndicator(color: AppColors.primaryGreen)),
+                    error: (_, _) => Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('সার্ভার থেকে কাজের তথ্য পাওয়া যায়নি।'),
+                            const SizedBox(height: 12),
+                            OutlinedButton(
+                              onPressed: () => ref.invalidate(ownerAssignmentDetailsProvider(assignmentId)),
+                              child: const Text('আবার চেষ্টা করুন'),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildInfoCard(
-                          icon: Icons.access_time_rounded,
-                          iconColor: const Color(0xFFE37400),
-                          iconBgColor: const Color(0xFFFEF7E0),
-                          label: 'তোলার সময়',
-                          value: 'সকাল ৮:২৪',
-                          subValue: '(GMT+6)',
-                        ),
+                    ),
+                    data: (assignment) => RefreshIndicator(
+                      color: AppColors.primaryGreen,
+                      onRefresh: () async {
+                        ref.invalidate(ownerAssignmentDetailsProvider(assignmentId));
+                        try {
+                          await ref.read(ownerAssignmentDetailsProvider(assignmentId).future);
+                        } catch (_) {}
+                      },
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                        children: _buildDetails(assignment),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // GPS Coordinates Card
-                  _buildGpsCard(),
-                  const SizedBox(height: 12),
-
-                  // Satellite Map Geofence Preview Card
-                  _buildGeofenceMapCard(),
-                  const SizedBox(height: 12),
-
-                  // Verification Timestamp Footer Card
-                  _buildVerificationFooterCard(),
-                  const SizedBox(height: 16),
-                ],
-              ),
-            ),
-          ),
-
-          // 3. Bottom Navigation Bar (Tab 3: লোকেশন active)
-          const OwnerBottomNavBar(currentIndex: 3),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return OwnerFarmHeaderBackground(
-      height: 150,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () => context.go('/farmer-activity'),
-                    icon: const Icon(
-                      Icons.arrow_back_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const SizedBox(width: 16),
-                  const Text(
-                    'ছবির বিস্তারিত',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              const Padding(
-                padding: EdgeInsets.only(left: 40),
-                child: Text(
-                  'কাজের ছবি ও সঠিক অবস্থান যাচাই',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: Color(0xFFE8F5E9),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
           ),
-        ),
-      ),
-    );
-  }
-
-
-  Widget _buildHeroPhoto() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: AspectRatio(
-          aspectRatio: 16 / 9,
-          child: Image.asset(
-            'assets/images/farmer_spraying.jpg',
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Container(
-              color: const Color(0xFFC8E6C9),
-              child: const Center(
-                child: Icon(Icons.photo_camera_rounded, size: 48, color: AppColors.primaryGreen),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusVerificationCard() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEAF7EE),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFC8E6C9)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(
-              color: Color(0xFF1E8E3E),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.check_rounded,
-              color: Colors.white,
-              size: 26,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'সঠিক অবস্থান',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E8E3E),
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'ছবিটি নির্ধারিত খামার এলাকার ভেতরেই তোলা হয়েছে।',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF475569),
-                    height: 1.25,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const OwnerBottomNavBar(currentIndex: 1),
         ],
       ),
     );
   }
 
-  Widget _buildInfoCard({
-    required IconData icon,
-    required Color iconColor,
-    required Color iconBgColor,
-    required String label,
-    required String value,
-    required String subValue,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8ECE8)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: iconBgColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF64748B),
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  subValue,
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    color: Color(0xFF94A3B8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  List<Widget> _buildDetails(TaskAssignmentModel assignment) {
+    final submission = assignment.submission;
+    final status = OwnerWorkStatus.label(assignment.status);
+    final check = submission == null || !assignment.isCompleted
+        ? null
+        : OwnerWorkStatus.verificationLabel(submission.geofencePassed, submission.isLate);
+    final photos = submission?.photoUrls ?? const <String>[];
 
-  Widget _buildGpsCard() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8ECE8)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F5E9),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.location_on_rounded,
-              color: AppColors.primaryGreen,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'জিপিএস লোকেশন',
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: Color(0xFF64748B),
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  '23.8103° N, 90.4125° E',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
-                  ),
-                ),
-                SizedBox(height: 1),
-                Text(
-                  'মুন্সীগঞ্জ খামার, সদর, ঢাকা',
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: Color(0xFF64748B),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGeofenceMapCard() {
-    return Container(
-      height: 175,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFD1EED8), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Stack(
-          fit: StackFit.expand,
+    return [
+      _section(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Satellite Aerial Image
-            Image.asset(
-              'assets/images/farm_satellite_map.jpg',
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                color: const Color(0xFF2E7D32),
-              ),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                Text(assignment.displayTitle,
+                    style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+                _badge(status, assignment.isCompleted),
+              ],
             ),
-
-            // Polygonal Geofence Boundary Overlay
-            CustomPaint(
-              painter: _GeofencePolygonPainter(),
-            ),
-
-            // Top Floating Tag: "🏠 নির্ধারিত খামার এলাকা"
-            Positioned(
-              top: 10,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.home_work_rounded,
-                        size: 14,
-                        color: Color(0xFF006837),
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        'নির্ধারিত খামার এলাকা',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF006837),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // Center Pin Marker
-            Center(
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF006837),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 6,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.location_on_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-            ),
+            const SizedBox(height: 8),
+            Text(assignment.task?.category ?? '',
+              style: const TextStyle(color: Color(0xFF64748B))),
+            const SizedBox(height: 12),
+            _line(Icons.person_outline, assignment.farmer?['full_name']?.toString() ?? 'কৃষক নেই'),
+            _line(Icons.location_on_outlined, assignment.location?.name ?? 'লোকেশন নেই'),
+            _line(Icons.event_outlined,
+              '${assignment.scheduledDate} • ${assignment.timeFormatted}'),
+            if (assignment.notes != null && assignment.notes!.isNotEmpty)
+              _line(Icons.notes_rounded, assignment.notes!),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildVerificationFooterCard() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8ECE8)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F5E9),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.gps_fixed_rounded,
-              color: AppColors.primaryGreen,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'যাচাই সম্পন্ন',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E8E3E),
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'ছবিটির লোকেশন আমাদের খামার এলাকার সাথে মিলেছে।',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF64748B),
-                  ),
-                ),
+      const SizedBox(height: 12),
+      _section(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('কাজের যাচাই',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            if (submission == null)
+              const Text('এখনও কোনো জমা বা যাচাইয়ের তথ্য পাওয়া যায়নি।',
+                style: TextStyle(color: Color(0xFF64748B)))
+            else ...[
+              if (check != null) _badge(check, check == 'সব ঠিক'),
+              const SizedBox(height: 8),
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                if (submission.geofencePassed != null)
+                  _badge(submission.geofencePassed! ? 'সঠিক লোকেশনে' : 'লোকেশনের বাইরে',
+                      submission.geofencePassed!),
+                if (submission.isLate != null)
+                  _badge(submission.isLate! ? 'সময় পেরিয়েছে' : 'সময়ের মধ্যে',
+                      !submission.isLate!),
+                if (submission.verificationStatus != null)
+                  _badge(_verificationText(submission.verificationStatus!),
+                      submission.verificationStatus == 'verified'),
+              ]),
+              if (submission.submittedAt != null) ...[
+                const SizedBox(height: 10),
+                _line(Icons.check_circle_outline,
+                    'জমা: ${DateFormatter.formatDateTimeToBanglaTime(submission.submittedAt)}'),
               ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: const [
-              Text(
-                'যাচাইয়ের সময়',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Color(0xFF94A3B8),
-                ),
-              ),
-              SizedBox(height: 2),
-              Text(
-                '১২ মার্চ ২০২৪, সকাল ৮:২৫',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF475569),
-                ),
-              ),
+              if (submission.latitude != null && submission.longitude != null)
+                _line(Icons.gps_fixed,
+                    '${submission.latitude}, ${submission.longitude}'),
+              if (submission.distanceMeters != null)
+                _line(Icons.social_distance,
+                    'দূরত্ব: ${submission.distanceMeters!.toStringAsFixed(1)} মিটার'),
             ],
-          ),
-        ],
+          ],
+        ),
       ),
-    );
-  }
-}
-
-class _GeofencePolygonPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    // Polygon boundary points
-    final path = Path()
-      ..moveTo(w * 0.20, h * 0.30)
-      ..lineTo(w * 0.72, h * 0.35)
-      ..lineTo(w * 0.65, h * 0.85)
-      ..lineTo(w * 0.22, h * 0.75)
-      ..close();
-
-    // Translucent Green Fill
-    final fillPaint = Paint()
-      ..color = const Color(0xFF00E676).withValues(alpha: 0.22)
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(path, fillPaint);
-
-    // Glowing Green Solid Border
-    final glowPaint = Paint()
-      ..color = const Color(0xFF00E676).withValues(alpha: 0.8)
-      ..strokeWidth = 3.5
-      ..style = PaintingStyle.stroke;
-    canvas.drawPath(path, glowPaint);
-
-    // White dashed inner border
-    final whiteBorder = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-    canvas.drawPath(path, whiteBorder);
+      const SizedBox(height: 12),
+      _section(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('জমা দেওয়া ছবি (${DateFormatter.toBanglaDigits(photos.length.toString())}টি)',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            if (photos.isEmpty)
+              const Text('কোনো ছবি জমা দেওয়া হয়নি।',
+                  style: TextStyle(color: Color(0xFF64748B)))
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3, crossAxisSpacing: 8, mainAxisSpacing: 8),
+                itemCount: photos.length,
+                itemBuilder: (context, index) => ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(photos[index], fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const ColoredBox(
+                      color: Color(0xFFE2E8F0),
+                      child: Icon(Icons.broken_image_outlined, color: Colors.grey))),
+                ),
+              ),
+          ],
+        ),
+      ),
+    ];
   }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  String _verificationText(String value) => switch (value) {
+    'verified' => 'যাচাইকৃত',
+    'pending' => 'যাচাই অপেক্ষমাণ',
+    'flagged' => 'যাচাইয়ে সতর্কতা',
+    'rejected' => 'যাচাই বাতিল',
+    _ => value,
+  };
+
+  Widget _section(Widget child) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: const Color(0xFFE2E8F0)),
+    ),
+    child: child,
+  );
+
+  Widget _line(IconData icon, String text) => Padding(
+    padding: const EdgeInsets.only(top: 8),
+    child: Row(children: [
+      Icon(icon, size: 17, color: AppColors.primaryGreen),
+      const SizedBox(width: 8),
+      Expanded(child: Text(text,
+        style: const TextStyle(fontSize: 13, color: Color(0xFF475569)))),
+    ]),
+  );
+
+  Widget _badge(String label, bool positive) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+    decoration: BoxDecoration(
+      color: positive ? const Color(0xFFDCFCE7) : const Color(0xFFFFF1DF),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Text(label, style: TextStyle(
+      color: positive ? const Color(0xFF15803D) : const Color(0xFF9A4B07),
+      fontSize: 11, fontWeight: FontWeight.w700)),
+  );
 }

@@ -327,9 +327,11 @@ class SubmittedPhotoDetail {
 
 class TaskSubmissionSummary {
   final int id;
-  final bool geofencePassed;
+  final bool? geofencePassed;
   final double? distanceMeters;
-  final bool isLate;
+  final double? latitude;
+  final double? longitude;
+  final bool? isLate;
   final String? submittedAt;
   final String? status;
   final String? verificationStatus;
@@ -338,9 +340,11 @@ class TaskSubmissionSummary {
 
   const TaskSubmissionSummary({
     required this.id,
-    this.geofencePassed = true,
+    this.geofencePassed,
     this.distanceMeters,
-    this.isLate = false,
+    this.latitude,
+    this.longitude,
+    this.isLate,
     this.submittedAt,
     this.status,
     this.verificationStatus,
@@ -349,7 +353,7 @@ class TaskSubmissionSummary {
   });
 
   factory TaskSubmissionSummary.fromJson(Map<String, dynamic> json) {
-    bool geoPassed = true;
+    bool? geoPassed;
     double? dist;
     double? subLat;
     double? subLng;
@@ -364,13 +368,15 @@ class TaskSubmissionSummary {
 
     if (json['geofence'] is Map) {
       final g = json['geofence'] as Map<String, dynamic>;
-      geoPassed = g['passed'] == true;
+      geoPassed = g['passed'] is bool ? g['passed'] as bool : null;
       dist = (g['distance_meters'] as num?)?.toDouble();
     } else if (json['geofence_passed'] != null) {
       geoPassed = json['geofence_passed'] == true || json['geofence_passed'] == 1;
     }
 
-    final bool late = json['is_late'] == true || json['is_late'] == 1;
+    final bool? late = json['is_late'] == null
+        ? null
+        : (json['is_late'] == true || json['is_late'] == 1);
     final String? submittedAtStr = json['submitted_at']?.toString();
 
     final List<String> photos = [];
@@ -419,6 +425,8 @@ class TaskSubmissionSummary {
       id: json['id'] is int ? json['id'] : int.tryParse(json['id'].toString()) ?? 0,
       geofencePassed: geoPassed,
       distanceMeters: dist,
+      latitude: subLat,
+      longitude: subLng,
       isLate: late,
       submittedAt: submittedAtStr,
       status: json['status']?.toString(),

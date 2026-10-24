@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../state/app_appearance.dart';
 import '../../core/theme/app_colors.dart';
 
 /// Sprout icon inside a circular white badge (Screen 1 & general branding)
@@ -686,7 +688,7 @@ class _FarmCropPainter extends CustomPainter {
 }
 
 /// Village Natural Scenario Painter for the Dashboard Header
-class VillageHeaderBackground extends StatelessWidget {
+class VillageHeaderBackground extends ConsumerWidget {
   final double height;
   final Widget child;
 
@@ -697,7 +699,8 @@ class VillageHeaderBackground extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final style = ref.watch(appAppearanceProvider).value?.forScreen('farmer_dashboard') ?? const HeaderStyle({});
     return Container(
       height: height,
       width: double.infinity,
@@ -731,9 +734,15 @@ class VillageHeaderBackground extends StatelessWidget {
             ),
 
             // Village Natural Scenery Canvas
-            CustomPaint(
-              painter: _VillageHeaderPainter(),
-            ),
+            if (style.imageUrl == null)
+              CustomPaint(painter: _VillageHeaderPainter())
+            else
+              Image.network(
+                style.imageUrl!,
+                fit: BoxFit.cover,
+                cacheWidth: (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round().clamp(320, 1440).toInt(),
+                errorBuilder: (_, _, _) => CustomPaint(painter: _VillageHeaderPainter()),
+              ),
 
             // Subtle top shadow overlay for crystal-clear text readability
             Container(
@@ -742,7 +751,7 @@ class VillageHeaderBackground extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withValues(alpha: 0.28),
+                    Colors.black.withValues(alpha: style.overlay),
                     Colors.black.withValues(alpha: 0.05),
                     Colors.transparent,
                   ],

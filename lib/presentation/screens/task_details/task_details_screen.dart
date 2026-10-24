@@ -535,12 +535,19 @@ class TaskDetailsScreen extends ConsumerWidget {
       }
     }
 
-    await ref.read(taskListProvider.notifier).startTask(task.id);
-    final assignmentId = int.tryParse(task.id.replaceAll(RegExp(r'[^0-9]'), ''));
-    if (assignmentId != null) {
-      try {
-        await ref.read(farmerTasksProvider.notifier).startTask(assignmentId);
-      } catch (_) {}
+    try {
+      await ref.read(taskListProvider.notifier).startTask(task.id);
+      await ref.read(farmerTasksProvider.notifier).refresh();
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('সার্ভারে কাজ শুরু করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।'),
+            backgroundColor: AppColors.errorRed,
+          ),
+        );
+      }
+      return;
     }
 
     if (context.mounted) {

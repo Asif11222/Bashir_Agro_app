@@ -89,7 +89,7 @@ class OwnerMockData {
       farmerName: 'রফিক উদ্দিন (চাষী)',
       location: 'উত্তর মাঠ, সবজি খামার',
       statusText: 'নির্ধারিত',
-      photoAsset: 'assets/images/vegetable_field.jpg',
+
     ),
     const OwnerTaskPlanModel(
       id: 'PLAN_002',
@@ -98,7 +98,7 @@ class OwnerMockData {
       farmerName: 'করিম শেখ (চাষী)',
       location: 'দক্ষিণ পুকুর, মৎস্য খামার',
       statusText: 'নির্ধারিত',
-      photoAsset: 'assets/images/fish_pond.jpg',
+
     ),
     const OwnerTaskPlanModel(
       id: 'PLAN_003',
@@ -107,7 +107,7 @@ class OwnerMockData {
       farmerName: 'আব্দুল জলিল (চাষী)',
       location: 'গরুর খামার, পশ্চিম মাঠ',
       statusText: 'চলমান',
-      photoAsset: 'assets/images/cow_shed.jpg',
+
     ),
     const OwnerTaskPlanModel(
       id: 'PLAN_004',
@@ -116,7 +116,7 @@ class OwnerMockData {
       farmerName: 'জাহানারা বেগম (চাষী)',
       location: 'পূর্ব মাঠ, বেগুন খামার',
       statusText: 'বাকি',
-      photoAsset: 'assets/images/farmer_spraying.jpg',
+
     ),
   ];
 
@@ -127,8 +127,8 @@ class OwnerMockData {
       description: 'টমেটো ও বেগুনের গাছের বৃদ্ধি পর্যবেক্ষণ করা হয়েছে। সব গাছ ভালো আছে।',
       time: 'সকাল ৮:৩০',
       location: 'সবজি ক্ষেত',
-      photoAsset: 'assets/images/vegetable_field.jpg',
-      isCompleted: true,
+
+      statusText: 'সম্পন্ন',
     ),
     const FarmerActivityItemModel(
       id: 'ACT_002',
@@ -136,8 +136,8 @@ class OwnerMockData {
       description: 'বেগুন ক্ষেতে পোকার আক্রমণ প্রতিরোধে জৈব কীটনাশক স্প্রে করা হয়েছে।',
       time: 'সকাল ১০:১৫',
       location: 'বেগুন ক্ষেত',
-      photoAsset: 'assets/images/farmer_spraying.jpg',
-      isCompleted: true,
+
+      statusText: 'সম্পন্ন',
     ),
     const FarmerActivityItemModel(
       id: 'ACT_003',
@@ -145,8 +145,8 @@ class OwnerMockData {
       description: 'ধান জমিতে ইউরিয়া সার প্রয়োগ করা হয়েছে।',
       time: 'দুপুর ১২:০০',
       location: 'ধান জমি',
-      photoAsset: 'assets/images/vegetable_field.jpg',
-      isCompleted: true,
+
+      statusText: 'সম্পন্ন',
     ),
     const FarmerActivityItemModel(
       id: 'ACT_004',
@@ -154,8 +154,8 @@ class OwnerMockData {
       description: 'গরুকে খড় ও সবুজ ঘাস খাওয়ানো হয়েছে এবং পানি দেওয়া হয়েছে।',
       time: 'দুপুর ২:৩০',
       location: 'গরুর খামার',
-      photoAsset: 'assets/images/cow_shed.jpg',
-      isCompleted: true,
+
+      statusText: 'সম্পন্ন',
     ),
     const FarmerActivityItemModel(
       id: 'ACT_005',
@@ -163,8 +163,8 @@ class OwnerMockData {
       description: 'পুকুরের পানির মান ও মাছের অবস্থা পরীক্ষা করা হয়েছে। পানি স্বচ্ছ আছে।',
       time: 'বিকাল ৪:০০',
       location: 'মাছের পুকুর',
-      photoAsset: 'assets/images/fish_pond.jpg',
-      isCompleted: true,
+
+      statusText: 'সম্পন্ন',
     ),
     const FarmerActivityItemModel(
       id: 'ACT_006',
@@ -172,8 +172,8 @@ class OwnerMockData {
       description: 'পুকুরে মাছের জন্য নির্ধারিত খাবার প্রদান করা হয়েছে।',
       time: 'বিকাল ৫:৩০',
       location: 'মাছের পুকুর',
-      photoAsset: 'assets/images/fish_pond.jpg',
-      isCompleted: true,
+
+      statusText: 'সম্পন্ন',
     ),
   ];
 }

@@ -52,3 +52,6 @@ app.*.map.json
 
 # Flutter CLI screenshots
 flutter_*.png
+
+# Archive files
+*.zip

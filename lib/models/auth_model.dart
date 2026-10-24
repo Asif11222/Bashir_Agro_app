@@ -5,6 +5,7 @@ class AuthUser {
   final String? email;
   final String phone;
   final String role;
+  final String? profilePhotoUrl;
 
   const AuthUser({
     required this.id,
@@ -12,6 +13,7 @@ class AuthUser {
     this.email,
     required this.phone,
     required this.role,
+    this.profilePhotoUrl,
   });
 
   bool get isFarmer => role == 'farmer';
@@ -24,6 +26,7 @@ class AuthUser {
       email: json['email']?.toString(),
       phone: json['phone']?.toString() ?? '',
       role: json['role']?.toString() ?? 'farmer',
+      profilePhotoUrl: json['profile_photo_url']?.toString(),
     );
   }
 
@@ -33,6 +36,7 @@ class AuthUser {
     'email': email,
     'phone': phone,
     'role': role,
+    'profile_photo_url': profilePhotoUrl,
   };
 }
 
