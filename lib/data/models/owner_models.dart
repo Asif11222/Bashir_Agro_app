@@ -1,3 +1,4 @@
+import '../../core/utils/task_thumbnail_resolver.dart';
 import '../../models/field_boundary_model.dart';
 import '../../core/utils/date_formatter.dart';
 
@@ -132,6 +133,7 @@ class FarmerActivityItemModel {
   final bool? geofencePassed;
   final bool? isLate;
   final List<String> photoUrls;
+  final String thumbnailType;
 
   const FarmerActivityItemModel({
     required this.id,
@@ -145,6 +147,7 @@ class FarmerActivityItemModel {
     this.geofencePassed,
     this.isLate,
     this.photoUrls = const [],
+    this.thumbnailType = 'vegetable',
   });
 
   bool get isCompleted => statusText == 'সম্পন্ন';
@@ -173,6 +176,10 @@ class FarmerActivityItemModel {
       isLate: submission?['is_late'] is bool
           ? submission!['is_late'] as bool
           : null,
+      thumbnailType: TaskThumbnailResolver.resolve(
+        category: task?['category']?.toString(),
+        name: task?['name']?.toString(),
+      ),
       photoUrls: evidence
           .whereType<Map<String, dynamic>>()
           .map((photo) => photo['url']?.toString() ?? '')
@@ -196,6 +203,7 @@ class OwnerTaskPlanModel {
   final bool? geofencePassed;
   final bool? isLate;
   final List<String> photoUrls;
+  final String thumbnailType;
 
   bool get isCompleted => statusText == 'সম্পন্ন';
 
@@ -217,6 +225,7 @@ class OwnerTaskPlanModel {
     this.geofencePassed,
     this.isLate,
     this.photoUrls = const [],
+    this.thumbnailType = 'vegetable',
   });
 
   factory OwnerTaskPlanModel.fromJson(Map<String, dynamic> json) {
@@ -250,6 +259,10 @@ class OwnerTaskPlanModel {
       isLate: submission?['is_late'] is bool
           ? submission!['is_late'] as bool
           : null,
+      thumbnailType: TaskThumbnailResolver.resolve(
+        category: task?['category']?.toString(),
+        name: task?['name']?.toString(),
+      ),
       photoUrls: evidence
           .whereType<Map<String, dynamic>>()
           .map((photo) => photo['url']?.toString() ?? '')

@@ -6,6 +6,7 @@ import '../../models/task_assignment_model.dart';
 import '../../services/api_service.dart';
 import '../../services/task_service.dart';
 import '../../core/utils/date_formatter.dart';
+import '../../core/utils/task_thumbnail_resolver.dart';
 import 'task_repository.dart';
 
 class ApiTaskRepository implements TaskRepository {
@@ -218,16 +219,10 @@ class ApiTaskRepository implements TaskRepository {
         break;
     }
 
-    final cat = (assignment.task?.category ?? '').toLowerCase();
-    final name = (assignment.task?.name ?? '').toLowerCase();
-    String thumbnail = 'vegetable';
-    if (cat.contains('মাছ') || cat.contains('fish') || name.contains('মাছ') || name.contains('পুকুর')) {
-      thumbnail = 'fish';
-    } else if (cat.contains('ডেইরি') || cat.contains('গরু') || cat.contains('cow') || cat.contains('পশু') || name.contains('দুধ') || name.contains('খামার')) {
-      thumbnail = 'cow';
-    } else if (name.contains('সার') || cat.contains('সার') || name.contains('fertilizer')) {
-      thumbnail = 'fertilizer';
-    }
+    final thumbnail = TaskThumbnailResolver.resolve(
+      category: assignment.task?.category,
+      name: assignment.task?.name,
+    );
 
     final timeRange = DateFormatter.formatTimeRange(assignment.startTime, assignment.endTime);
 

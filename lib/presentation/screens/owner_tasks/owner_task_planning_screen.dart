@@ -7,6 +7,7 @@ import '../../../data/models/owner_models.dart';
 import '../../../state/owner_state.dart';
 import '../../widgets/owner_bottom_nav_bar.dart';
 import '../../widgets/owner_farm_header.dart';
+import '../../widgets/farm_graphics.dart';
 
 class OwnerTaskPlanningScreen extends ConsumerStatefulWidget {
   const OwnerTaskPlanningScreen({super.key});
@@ -471,23 +472,11 @@ class _OwnerTaskPlanningScreenState extends ConsumerState<OwnerTaskPlanningScree
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Thumbnail Image
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: SizedBox(
-                    width: 82,
-                    height: 82,
-                    child: task.photoUrls.isNotEmpty
-                        ? Image.network(
-                            task.photoUrls.first,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.grey),
-                          )
-                        : Container(
-                            color: const Color(0xFFE9F5ED),
-                            child: const Icon(Icons.grass_rounded, color: AppColors.primaryGreen, size: 32),
-                          ),
-                  ),
+                // Use the same work illustration as farmer task cards, not an evidence photo.
+                TaskThumbnailWidget(
+                  type: task.thumbnailType,
+                  size: 82,
+                  borderRadius: 14,
                 ),
                 const SizedBox(width: 12),
 
