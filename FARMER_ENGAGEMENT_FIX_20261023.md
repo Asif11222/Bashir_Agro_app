@@ -12,7 +12,7 @@ The Laravel API update in the corresponding backend package is required for corr
 flutter pub get
 flutter analyze
 flutter test test/owner_work_status_sync_test.dart
-flutter run --dart-define=API_BASE_URL=https://129-212-239-216.sslip.io/api/v1
+flutter run --dart-define=API_BASE_URL=https://129.212.239.216/api/v1
 ```
 
 Use your production API URL when deploying; no Android localhost/ADB reverse is needed for the HTTPS API.
