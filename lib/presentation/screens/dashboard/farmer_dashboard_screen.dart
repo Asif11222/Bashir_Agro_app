@@ -554,9 +554,15 @@ class _FarmerDashboardScreenState extends ConsumerState<FarmerDashboardScreen>
                                       ),
                                     tasksAsync.when(
                                       data: (tasks) {
-                                        final activeCount = tasks.where((t) => t.status != TaskStatus.completed).length;
+                                        final now = DateTime.now();
+                                        final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+                                        final todayActiveCount = tasks.where((t) {
+                                          final isToday = t.date == todayStr || t.date == 'আজ';
+                                          final isCompleted = t.status == TaskStatus.completed || t.status == TaskStatus.submitted;
+                                          return isToday && !isCompleted;
+                                        }).length;
                                         return Text(
-                                          activeCount > 0 ? 'আজ $activeCountটি কাজ আছে' : 'আজ কোনো কাজ বাকি নেই',
+                                          todayActiveCount > 0 ? 'আজ $todayActiveCountটি কাজ বাকি আছে' : 'আজ কোনো কাজ বাকি নেই',
                                           style: const TextStyle(
                                             fontSize: 12.5,
                                             color: AppColors.textSecondary,
@@ -611,17 +617,21 @@ class _FarmerDashboardScreenState extends ConsumerState<FarmerDashboardScreen>
 
                       final filteredTasks = tasks.where((task) {
                         final isCompleted = task.status == TaskStatus.completed || task.status == TaskStatus.submitted;
+                        final isScheduledToday = task.date == todayStr || task.date == 'আজ';
                         final isUpcoming = task.date.isNotEmpty && task.date != 'আজ' && task.date.compareTo(todayStr) > 0;
-                        final isToday = (task.date == todayStr || task.date == 'আজ') && !isCompleted;
-                        final isOverdue = task.date.isNotEmpty && task.date != 'আজ' && task.date.compareTo(todayStr) < 0 && !isCompleted;
+                        final isPastOverdue = task.date.isNotEmpty && task.date != 'আজ' && task.date.compareTo(todayStr) < 0;
 
                         if (currentFilter == TaskTabFilter.today) {
-                          return isToday;
+                          // All tasks for today (completed, in-progress, or scheduled)
+                          return isScheduledToday;
                         } else if (currentFilter == TaskTabFilter.upcoming) {
+                          // Tomorrow and future scheduled tasks that are incomplete
                           return isUpcoming && !isCompleted;
                         } else if (currentFilter == TaskTabFilter.pending) {
-                          return (isOverdue || task.badgeText == 'বাকি আছে' || task.badgeText == 'সময় পার (বিলম্বিত)' || task.status == TaskStatus.inProgress || task.status == TaskStatus.scheduled) && !isCompleted && !isUpcoming;
+                          // Incomplete tasks from past dates only (yesterday and older)
+                          return isPastOverdue && !isCompleted;
                         } else {
+                          // Completed tasks tab: only completed tasks across all dates
                           return isCompleted;
                         }
                       }).toList();
@@ -647,7 +657,7 @@ class _FarmerDashboardScreenState extends ConsumerState<FarmerDashboardScreen>
                                                 ? 'কোনো আসন্ন কাজ নির্ধারিত নেই।'
                                                 : (currentFilter == TaskTabFilter.today
                                                     ? 'আজকের জন্য কোনো কাজ নির্ধারিত নেই।'
-                                                    : 'এই ক্যাটাগরিতে কোনো কাজ নেই।')),
+                                                    : 'কোনো বাকি কাজ নেই।')),
                                         style: const TextStyle(color: AppColors.textSecondary, fontSize: 15),
                                         textAlign: TextAlign.center,
                                       ),

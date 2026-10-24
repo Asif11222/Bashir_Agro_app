@@ -65,18 +65,17 @@ class TaskService {
     return [];
   }
 
-  /// Get today's tasks
+  /// Get today's tasks (all tasks scheduled for today, whether completed or in-progress)
   List<TaskAssignmentModel> filterTodayTasks(List<TaskAssignmentModel> allTasks) {
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
     return allTasks.where((task) {
-      final isToday = task.scheduledDate == todayStr || task.scheduledDate.isEmpty || task.scheduledDate == 'আজ';
-      return isToday && !task.isCompleted;
+      return task.scheduledDate == todayStr || task.scheduledDate.isEmpty || task.scheduledDate == 'আজ';
     }).toList();
   }
 
-  /// Get upcoming tasks (scheduled for future dates)
+  /// Get upcoming tasks (scheduled for future dates and incomplete)
   List<TaskAssignmentModel> filterUpcomingTasks(List<TaskAssignmentModel> allTasks) {
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
@@ -88,9 +87,16 @@ class TaskService {
     }).toList();
   }
 
-  /// Get pending tasks (assigned, in_progress, overdue)
+  /// Get pending / overdue tasks (scheduled for past dates and incomplete)
   List<TaskAssignmentModel> filterPendingTasks(List<TaskAssignmentModel> allTasks) {
-    return allTasks.where((task) => !task.isCompleted).toList();
+    final now = DateTime.now();
+    final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+    return allTasks.where((task) {
+      if (task.isCompleted) return false;
+      if (task.scheduledDate.isEmpty || task.scheduledDate == 'আজ') return false;
+      return task.scheduledDate.compareTo(todayStr) < 0;
+    }).toList();
   }
 
   /// Get completed tasks

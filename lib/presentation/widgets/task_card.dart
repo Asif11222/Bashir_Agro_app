@@ -14,27 +14,37 @@ class TaskCard extends StatelessWidget {
   });
 
   Color _getBadgeBgColor() {
-    switch (task.badgeText) {
-      case 'চলছে':
-        return AppColors.badgeRunningBg;
-      case 'বাকি আছে':
-        return AppColors.badgePendingBg;
-      case 'আজ করব':
-      default:
-        return AppColors.badgeTodayBg;
+    if (task.badgeText == 'সম্পন্ন') {
+      return const Color(0xFFDCFCE7);
+    } else if (task.badgeText == 'চলছে') {
+      return AppColors.badgeRunningBg;
+    } else if (task.badgeText == 'বাকি আছে') {
+      return AppColors.badgePendingBg;
+    } else if (task.badgeText == 'সময় পার (বিলম্বিত)' || task.badgeText == 'দেরি হয়েছে') {
+      return const Color(0xFFFEF3C7);
+    } else if (task.badgeText.contains('আসন্ন')) {
+      return const Color(0xFFEFF6FF);
+    } else if (task.badgeText == 'রিভিউ অপেক্ষায়') {
+      return const Color(0xFFF3E8FF);
     }
+    return AppColors.badgeTodayBg;
   }
 
   Color _getBadgeTextColor() {
-    switch (task.badgeText) {
-      case 'চলছে':
-        return AppColors.badgeRunningText;
-      case 'বাকি আছে':
-        return AppColors.badgePendingText;
-      case 'আজ করব':
-      default:
-        return AppColors.badgeTodayText;
+    if (task.badgeText == 'সম্পন্ন') {
+      return const Color(0xFF15803D);
+    } else if (task.badgeText == 'চলছে') {
+      return AppColors.badgeRunningText;
+    } else if (task.badgeText == 'বাকি আছে') {
+      return AppColors.badgePendingText;
+    } else if (task.badgeText == 'সময় পার (বিলম্বিত)' || task.badgeText == 'দেরি হয়েছে') {
+      return const Color(0xFFB45309);
+    } else if (task.badgeText.contains('আসন্ন')) {
+      return const Color(0xFF1D4ED8);
+    } else if (task.badgeText == 'রিভিউ অপেক্ষায়') {
+      return const Color(0xFF7E22CE);
     }
+    return AppColors.badgeTodayText;
   }
 
   @override
